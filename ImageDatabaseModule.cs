@@ -1,6 +1,7 @@
 ﻿using Oxide.Core;
 using Oxide.Core.Plugins;
 using System;
+using System.Collections.Generic;
 
 namespace Oxide.Ext.CarbonAliases
 {
@@ -16,12 +17,12 @@ namespace Oxide.Ext.CarbonAliases
                 Interface.Oxide.LogInfo("ImageLibrary is being used in Carbon to Oxide Conversion...");
         }
 
-        public void QueueBatch(bool @override, params string[] urls)
+        public void QueueBatch(bool @override, IEnumerable<string> urls)
         {
             foreach (var url in urls)
                 ImageLibrary.Call<bool>("AddImage", url, url, 0uL);
         }
-        public void QueueBatch(float scale, bool @override, params string[] urls)
+        public void QueueBatch(float scale, bool @override, IEnumerable<string> urls)
         {
             foreach (var url in urls)
                 ImageLibrary.Call<bool>("AddImage", url, url, 0uL);
