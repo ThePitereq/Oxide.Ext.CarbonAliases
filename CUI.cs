@@ -585,8 +585,11 @@ namespace Oxide.Ext.CarbonAliases
             scrollview.Inertia = inertia;
             scrollview.DecelerationRate = decelerationRate;
             scrollview.ScrollSensitivity = scrollSensitivity;
+            scrollview.ContentTransform = new CuiRectTransform();
             contentTransformComponent = scrollview.ContentTransform;
+            scrollview.HorizontalScrollbar = new CuiScrollbar();
             horizontalScrollBar = scrollview.HorizontalScrollbar;
+            scrollview.VerticalScrollbar = new CuiScrollbar();
             verticalScrollBar = scrollview.VerticalScrollbar;
 
             element.Components.Add(scrollview);
