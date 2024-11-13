@@ -13,7 +13,7 @@ namespace Oxide.Ext.CarbonAliases
     {
         public Handler Manager { get; private set; }
 
-        internal int _currentId = 0;
+        internal int _currentId = 0; 
 
         public enum ClientPanels
         {
@@ -565,6 +565,49 @@ namespace Oxide.Ext.CarbonAliases
             return CreateImage(container, parent, url, color, material, xMin, xMax, yMin, yMax, OxMin, OxMax, OyMin, OyMax, fadeIn, fadeOut, needsCursor, needsKeyboard, outlineColor, outlineDistance, outlineUseGraphicAlpha, id, destroyUi, update);
         }
 
+        public Pair<string, CuiElement> CreateScrollView(CuiElementContainer container, string parent,bool vertical, bool horizontal, ScrollRect.MovementType movementType, float elasticity, bool inertia, float decelerationRate, float scrollSensitivity, string maskSoftness, out CuiRectTransform contentTransformComponent, out CuiScrollbar horizontalScrollBar, out CuiScrollbar verticalScrollBar, float xMin = 0f, float xMax = 1f, float yMin = 0f, float yMax = 1f, float OxMin = 0f, float OxMax = 0f, float OyMin = 0f, float OyMax = 0f, float fadeIn = 0f, float fadeOut = 0f, bool needsCursor = false, bool needsKeyboard = false, string id = null, string destroyUi = null, bool update = false)
+        {
+            if (id == null) id = AppendId();
+            var element = new CuiElement
+            {
+                Parent = parent,
+                Name = id,
+                FadeOut = fadeOut,
+                DestroyUi = destroyUi,
+                Update = update,
+            };
+
+            var scrollview = new CuiScrollViewComponent();
+            scrollview.Vertical = vertical;
+            scrollview.Horizontal = horizontal;
+            scrollview.MovementType = movementType;
+            scrollview.Elasticity = elasticity;
+            scrollview.Inertia = inertia;
+            scrollview.DecelerationRate = decelerationRate;
+            scrollview.ScrollSensitivity = scrollSensitivity;
+            contentTransformComponent = scrollview.ContentTransform;
+            horizontalScrollBar = scrollview.HorizontalScrollbar;
+            verticalScrollBar = scrollview.VerticalScrollbar;
+
+            element.Components.Add(scrollview);
+
+            if (!update || (update && (xMin != 0 || xMax != 1 || yMin != 0 || yMax != 1)))
+            {
+                var rect = new CuiRectTransformComponent();
+                rect.AnchorMin = $"{xMin} {yMin}";
+                rect.AnchorMax = $"{xMax} {yMax}";
+                rect.OffsetMin = $"{OxMin} {OyMin}";
+                rect.OffsetMax = $"{OxMax} {OyMax}";
+                element.Components.Add(rect);
+            }
+
+            if (needsCursor) element.Components.Add(new CuiNeedsCursorComponent());
+            if (needsKeyboard) element.Components.Add(new CuiNeedsKeyboardComponent());
+
+            if (!update) container?.Add(element);
+            return new Pair<string, CuiElement>(id, element);
+        }
+
         public static string RustToHexColor(string rustColor, float? alpha = null, bool includeAlpha = true)
         {
             var colors = rustColor.Split(' ');
@@ -822,7 +865,7 @@ namespace Oxide.Ext.CarbonAliases
         public static Pair<string, CuiElement> UpdateSprite(this CUI cui, string id, string sprite, string color, string material = null, float xMin = 0f, float xMax = 1f, float yMin = 0f, float yMax = 1f, float OxMin = 0f, float OxMax = 0f, float OyMin = 0f, float OyMax = 0f, float fadeIn = 0f, float fadeOut = 0f, bool needsCursor = false, bool needsKeyboard = false, string outlineColor = null, string outlineDistance = null, bool outlineUseGraphicAlpha = false, string destroyUi = null)
         {
             return cui.CreateSprite(null, null, sprite, color, material, xMin, xMax, yMin, yMax, OxMin, OxMax, OyMin, OyMax, fadeIn, fadeOut, needsCursor, needsKeyboard, outlineColor, outlineDistance, outlineUseGraphicAlpha, id, destroyUi, true);
-        }
+        } 
         public static Pair<string, CuiElement> UpdateItemImage(this CUI cui, string id, int itemID, ulong skinID, string color, string material = null, float xMin = 0f, float xMax = 1f, float yMin = 0f, float yMax = 1f, float OxMin = 0f, float OxMax = 0f, float OyMin = 0f, float OyMax = 0f, float fadeIn = 0f, float fadeOut = 0f, bool needsCursor = false, bool needsKeyboard = false, string outlineColor = null, string outlineDistance = null, bool outlineUseGraphicAlpha = false, string destroyUi = null)
         {
             return cui.CreateItemImage(null, null, itemID, skinID, color, material, xMin, xMax, yMin, yMax, OxMin, OxMax, OyMin, OyMax, fadeIn, fadeOut, needsCursor, needsKeyboard, outlineColor, outlineDistance, outlineUseGraphicAlpha, id, destroyUi, true);
@@ -834,6 +877,10 @@ namespace Oxide.Ext.CarbonAliases
         public static Pair<string, CuiElement> UpdateSimpleImage(this CUI cui, string id, string png, string sprite, string color, string material = null, float xMin = 0f, float xMax = 1f, float yMin = 0f, float yMax = 1f, float OxMin = 0f, float OxMax = 0f, float OyMin = 0f, float OyMax = 0f, float fadeIn = 0f, float fadeOut = 0f, bool needsCursor = false, bool needsKeyboard = false, string outlineColor = null, string outlineDistance = null, bool outlineUseGraphicAlpha = false, string destroyUi = null)
         {
             return cui.CreateSimpleImage(null, null, png, sprite, color, material, xMin, xMax, yMin, yMax, OxMin, OxMax, OyMin, OyMax, fadeIn, fadeOut, needsCursor, needsKeyboard, outlineColor, outlineDistance, outlineUseGraphicAlpha, id, destroyUi, true);
+        }
+        public static Pair<string, CuiElement> UpdateScrollView(this CUI cui, string id, bool vertical, bool horizontal, ScrollRect.MovementType movementType, float elasticity, bool inertia, float decelerationRate, float scrollSensitivity, string maskSoftness, out CuiRectTransform contentTransformComponent, out CuiScrollbar horizontalScrollBar, out CuiScrollbar verticalScrollBar, float xMin = 0f, float xMax = 1f, float yMin = 0f, float yMax = 1f, float OxMin = 0f, float OxMax = 0f, float OyMin = 0f, float OyMax = 0f, float fadeIn = 0f, float fadeOut = 0f, bool needsCursor = false, bool needsKeyboard = false, string destroyUi = null)
+        {
+            return cui.CreateScrollView(null, null, vertical, horizontal, movementType, elasticity, inertia, decelerationRate, scrollSensitivity, maskSoftness, out contentTransformComponent, out horizontalScrollBar, out verticalScrollBar, xMin, xMax, yMin, yMax, OxMin, OxMax, OyMin, OyMax, fadeIn, fadeOut, needsCursor, needsKeyboard, id, destroyUi, true);
         }
     }
 }
