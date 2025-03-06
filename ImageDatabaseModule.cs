@@ -27,6 +27,16 @@ namespace Oxide.Ext.CarbonAliases
             foreach (var url in urls)
                 ImageLibrary.Call<bool>("AddImage", url, url, 0uL);
         }
+        public void Queue(Dictionary<string, string> urls)
+        {
+            foreach (var kv in urls)
+                ImageLibrary.Call<bool>("AddImage", kv.Value, kv.Key, 0uL);
+        }
+        public void DeleteImage(string url)
+        {
+            ImageLibrary.Call("RemoveImage", url);
+        }
+        
         public void AddMap(string key, string url)
         {
             ImageLibrary.Call<bool>("AddImage", url, key, 0uL);

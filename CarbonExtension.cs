@@ -12,7 +12,7 @@ namespace Oxide.Ext.CarbonAliases
 
         internal static CUI carbonCUI;
 
-        public override void Load() => Interface.Oxide.LogWarning("\nCarbon to Oxide Extension Loaded!\nPlease consider switching to Carbon.\nThis will have a positive impact on the performance of at least some of your plugins!\nhttps://carbonmod.gg/\n");
+        public override void Load() => Interface.Oxide.LogWarning("\nCarbon to Oxide Extension Loaded!\nSwitching to Carbon will have a positive impact on the performance of at least some of your plugins!\nConsider this!\nhttps://carbonmod.gg/\n");
 
         public override void LoadPluginWatchers(string plugindir) { }
 
