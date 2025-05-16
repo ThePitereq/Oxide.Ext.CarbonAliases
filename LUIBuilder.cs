@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Text;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -105,22 +106,18 @@ public class LUIBuilder
 	                    }
 	                    if (image.material != null)
 	                    {
-		                    
 		                    compBuilder.Add("material", image.material);
 	                    }
 	                    if (image.color != null)
 	                    {
-		                    
 		                    compBuilder.Add("color", image.color);
 	                    }
 	                    if (image.imageType != null)
 	                    {
-		                    
-		                    compBuilder.Add("imageType", image.imageType);
+		                    compBuilder.Add("imagetype", image.imageType);
 	                    }
-	                    if (image.png != 0)
+	                    if (image.png != null)
 	                    {
-		                    
 		                    compBuilder.Add("png", image.png);
 	                    }
 	                    if (image.itemid != 0)
@@ -157,9 +154,12 @@ public class LUIBuilder
 		                    
 		                    compBuilder.Add("url", rawImage.url);
 	                    }
-	                    if (rawImage.steamid != 0)
+	                    if (rawImage.png != null)
 	                    {
-		                    
+		                    compBuilder.Add("png", rawImage.png);
+	                    }
+	                    if (rawImage.steamid != null)
+	                    {
 		                    compBuilder.Add("steamid", rawImage.steamid);
 	                    }
 	                    break;
@@ -194,7 +194,7 @@ public class LUIBuilder
 	                    if (button.imageType != null)
 	                    {
 		                    
-		                    compBuilder.Add("imageType", button.imageType);
+		                    compBuilder.Add("imagetype", button.imageType);
 	                    }
 	                    if (button.normalColor != null)
 	                    {
@@ -542,6 +542,12 @@ public class LUIBuilder
             }
             elements.Add(el);
         }
+    }
+
+    public byte[] GetMergedBytes()
+    {
+	    string stringJson = JsonConvert.SerializeObject(elements, Formatting.None, _cuiSettings).Replace("\\n", "\n");
+	    return Encoding.ASCII.GetBytes(stringJson);
     }
     
     private Dictionary<string, object> WriteScrollBar(LuiScrollbar scroll)

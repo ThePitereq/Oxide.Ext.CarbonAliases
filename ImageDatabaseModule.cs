@@ -2,6 +2,7 @@
 using Oxide.Core.Plugins;
 using System;
 using System.Collections.Generic;
+using Pool = Facepunch.Pool;
 
 namespace Oxide.Ext.CarbonAliases
 {
@@ -12,21 +13,29 @@ namespace Oxide.Ext.CarbonAliases
         public ImageDatabaseModule() {
             ImageLibrary = Interface.GetMod().RootPluginManager.GetPlugin("ImageLibrary");
             if (ImageLibrary == null)
-                Interface.Oxide.LogWarning("ImageLibrary not found! Images will print errors!");
-            else
-                Interface.Oxide.LogInfo("ImageLibrary is being used in Carbon to Oxide Conversion...");
+                Interface.Oxide.LogWarning("ImageLibrary not found! UI building will print errors!");
         }
 
-        public void QueueBatch(bool @override, IEnumerable<string> urls)
+        public void QueueBatch(bool @override, IEnumerable<string> urls) => QueueBatch(@override, null, urls);
+        
+        public void QueueBatch(bool @override, Action<List<ImageQueueResult>> onComplete, IEnumerable<string> urls)
         {
-            foreach (var url in urls)
-                ImageLibrary.Call<bool>("AddImage", url, url, 0uL);
+            Dictionary<string, string> images = Pool.Get<Dictionary<string, string>>();
+            images.Clear();
+            foreach (string url in urls)
+            {
+                if (images.ContainsKey(url)) continue;
+                images.Add(url, url);
+            }
+            ImageLibrary.Call("ImportImageList", "CarbonAliasesRequest", images, 0UL, @override, () => onComplete(null));
+            Pool.FreeUnmanaged(ref images);
         }
-        public void QueueBatch(float scale, bool @override, IEnumerable<string> urls)
+
+        public class ImageQueueResult
         {
-            foreach (var url in urls)
-                ImageLibrary.Call<bool>("AddImage", url, url, 0uL);
+            
         }
+
         public void Queue(Dictionary<string, string> urls)
         {
             foreach (var kv in urls)
@@ -45,6 +54,12 @@ namespace Oxide.Ext.CarbonAliases
         {
 
         }
+        
+        public bool HasImage(string key)
+        {
+            return ImageLibrary.Call<bool>("HasImage", key, 0UL);
+        }
+        
         public uint GetImage(string key, float scale = 0, bool silent = false)
         {
             return Convert.ToUInt32(ImageLibrary.Call<string>("GetImage", key));

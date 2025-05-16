@@ -12,7 +12,7 @@
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
-    <LangVersion>11</LangVersion>
+    <LangVersion>12</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -84,6 +84,7 @@
   <ItemGroup>
     <Compile Include="BaseModule.cs" />
     <Compile Include="CarbonExtension.cs" />
+    <Compile Include="Community.cs" />
     <Compile Include="CUI.cs" />
     <Compile Include="ImageDatabaseModule.cs" />
     <Compile Include="LUI.cs" />

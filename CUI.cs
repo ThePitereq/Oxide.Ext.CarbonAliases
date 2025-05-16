@@ -637,27 +637,17 @@ namespace Oxide.Ext.CarbonAliases
             return $"#{result}";
         }
 
-        public string GetFont(Handler.FontTypes type)
+        public string GetFont(FontTypes type)
         {
-            switch (type)
+            return type switch
             {
-                case FontTypes.Arial:
-                    return "arial.ttf";
-
-                case FontTypes.RobotoCondensedBold:
-                    return "robotocondensed-bold.ttf";
-
-                case FontTypes.RobotoCondensedRegular:
-                    return "robotocondensed-regular.ttf";
-
-                case FontTypes.PermanentMarker:
-                    return "permanentmarker.ttf";
-
-                case FontTypes.DroidSansMono:
-                    return "droidsansmono.ttf";
-            }
-
-            return "robotocondensed-regular.ttf";
+                FontTypes.RobotoCondensedBold => "robotocondensed-bold.ttf",
+                FontTypes.RobotoCondensedRegular => "robotocondensed-regular.ttf",
+                FontTypes.PermanentMarker => "permanentmarker.ttf",
+                FontTypes.DroidSansMono => "droidsansmono.ttf",
+                FontTypes.NotoSansArabicBold => "NotoSansArabic-Bold.ttf",
+                _ => "robotocondensed-regular.ttf"
+            };
         }
 
         #endregion
@@ -745,9 +735,8 @@ namespace Oxide.Ext.CarbonAliases
 
             public enum FontTypes
             {
-                Arial,
                 RobotoCondensedBold, RobotoCondensedRegular,
-                PermanentMarker, DroidSansMono
+                PermanentMarker, DroidSansMono, NotoSansArabicBold
             }
 
             #endregion

@@ -12,6 +12,8 @@ namespace Oxide.Ext.CarbonAliases;
 public class LUI : IDisposable
 {
 	public readonly List<LuiContainer> elements = new();
+	
+	private ImageDatabaseModule imgDb;
 
 	private readonly CUI _parent;
 
@@ -24,6 +26,7 @@ public class LUI : IDisposable
 	public LUI(CUI cui)
 	{
 		_parent = cui;
+		imgDb = BaseModule.GetModule<ImageDatabaseModule>();
 	}
 
 	/// <summary>
@@ -129,10 +132,13 @@ public class LUI : IDisposable
 
 	#region Panel Creation
 
+	public LuiContainer CreateEmptyContainer(LuiContainer container, string name = "", bool add = false) => CreateEmptyContainer(container.name, name, add);
+
+	
 	/// <summary>
 	/// Creates empty container without anything. Shouldn't be used outside LUI library, but in rare cases might be useful.
 	/// </summary>
-	public LuiContainer CreateEmptyContainer(string parent, string name = "")
+	public LuiContainer CreateEmptyContainer(string parent, string name = "", bool add = false)
 	{
 		LuiContainer cont = new();
 		cont.parent = parent;
@@ -144,6 +150,8 @@ public class LUI : IDisposable
 			lastName = newName;
 			cont.name = newName;
 		}
+		if (add)
+			elements.Add(cont);
 		return cont;
 	}
 
@@ -186,11 +194,11 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-	public LuiContainer CreateImage(LuiContainer container, LuiPosition position, LuiOffset offset, uint png, string color = LuiColors.White, string name = "") => CreateImage(container.name, position, offset, png, color, name);
-	public LuiContainer CreateImage(LuiContainer container, LuiOffset offset, uint png, string color = LuiColors.White, string name = "") => CreateImage(container.name, LuiPosition.None, offset, png, color, name);
-	public LuiContainer CreateImage(string parent, LuiOffset offset, uint png, string color = LuiColors.White, string name = "") => CreateImage(parent, LuiPosition.None, offset, png, color, name);
+	public LuiContainer CreateImage(LuiContainer container, LuiPosition position, LuiOffset offset, string png, string color = LuiColors.White, string name = "") => CreateImage(container.name, position, offset, png, color, name);
+	public LuiContainer CreateImage(LuiContainer container, LuiOffset offset, string png, string color = LuiColors.White, string name = "") => CreateImage(container.name, LuiPosition.None, offset, png, color, name);
+	public LuiContainer CreateImage(string parent, LuiOffset offset, string png, string color = LuiColors.White, string name = "") => CreateImage(parent, LuiPosition.None, offset, png, color, name);
 
-	public LuiContainer CreateImage(string parent, LuiPosition position, LuiOffset offset, uint png, string color = LuiColors.White, string name = "")
+	public LuiContainer CreateImage(string parent, LuiPosition position, LuiOffset offset, string png, string color = LuiColors.White, string name = "")
 	{
 		LuiContainer cont = CreateEmptyContainer(parent, name);
 		cont.SetAnchorAndOffset(position, offset);
@@ -205,21 +213,42 @@ public class LUI : IDisposable
 
 	public LuiContainer CreateImageFromDb(string parent, LuiPosition position, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "")
 	{
-		ImageDatabaseModule imageDb = BaseModule.GetModule<ImageDatabaseModule>();
 		LuiContainer cont = CreateEmptyContainer(parent, name);
-		uint img = imageDb.GetImage(dbName);
-		if (img != 0)
+		if (imgDb.HasImage(dbName))
 		{
 			cont.SetAnchorAndOffset(position, offset);
-			cont.SetImage(img, color);
+			cont.SetImage(imgDb.GetImageString(dbName), color);
 		}
 		else
 		{
 			Interface.Oxide.LogWarning($"[LUI] You're trying to image from ImageDatabase '{dbName}' which doesn't exist. Ignoring.");
+			return null;
 		}
 		elements.Add(cont);
 		return cont;
 	}
+
+	public LuiContainer CreateRawImageFromDb(LuiContainer container, LuiPosition position, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => CreateImageFromDb(container.name, position, offset, dbName, color, name);
+	public LuiContainer CreateRawImageFromDb(LuiContainer container, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => CreateImageFromDb(container.name, LuiPosition.None, offset, dbName, color, name);
+	public LuiContainer CreateRawImageFromDb(string parent, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => CreateImageFromDb(parent, LuiPosition.None, offset, dbName, color, name);
+
+	public LuiContainer CreateRawImageFromDb(string parent, LuiPosition position, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "")
+	{
+		LuiContainer cont = CreateEmptyContainer(parent, name);
+		if (imgDb.HasImage(dbName))
+		{
+			cont.SetAnchorAndOffset(position, offset);
+			cont.SetRawImage(imgDb.GetImageString(dbName), color);
+		}
+		else
+		{
+			Interface.Oxide.LogWarning($"[LUI] You're trying to image from ImageDatabase '{dbName}' which doesn't exist. Ignoring.");
+			return null;
+		}
+		elements.Add(cont);
+		return cont;
+	}
+
 
 	public LuiContainer CreateUrlImage(LuiContainer container, LuiPosition position, LuiOffset offset, string url, string color = LuiColors.White, string name = "") => CreateUrlImage(container.name, position, offset, url, color, name);
 	public LuiContainer CreateUrlImage(LuiContainer container, LuiOffset offset, string url, string color = LuiColors.White, string name = "") => CreateUrlImage(container.name, LuiPosition.None, offset, url, color, name);
@@ -234,36 +263,30 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-	public LuiContainer CreateItemIcon(LuiContainer container, LuiPosition position, LuiOffset offset, string shortname, ulong skinId = 0, string name = "") => CreateItemIcon(container.name, position, offset, shortname, skinId, name);
-	public LuiContainer CreateItemIcon(LuiContainer container, LuiOffset offset, string shortname, ulong skinId = 0, string name = "") => CreateItemIcon(container.name, LuiPosition.None, offset, shortname, skinId, name);
-	public LuiContainer CreateItemIcon(string parent, LuiOffset offset, string shortname, ulong skinId = 0, string name = "") => CreateItemIcon(parent, LuiPosition.None, offset, shortname, skinId, name);
+	public LuiContainer CreateItemIcon(LuiContainer container, LuiPosition position, LuiOffset offset, string shortname, ulong skinId = 0, string color = "", string name = "") => CreateItemIcon(container.name, position, offset, shortname, skinId, color, name);
+	public LuiContainer CreateItemIcon(LuiContainer container, LuiOffset offset, string shortname, ulong skinId = 0, string color = "", string name = "") => CreateItemIcon(container.name, LuiPosition.None, offset, shortname, skinId, color, name);
+	public LuiContainer CreateItemIcon(string parent, LuiOffset offset, string shortname, ulong skinId = 0, string color = "", string name = "") => CreateItemIcon(parent, LuiPosition.None, offset, shortname, skinId, color, name);
 
-	public LuiContainer CreateItemIcon(string parent, LuiPosition position, LuiOffset offset, string shortname, ulong skinId = 0, string name = "")
+	public LuiContainer CreateItemIcon(string parent, LuiPosition position, LuiOffset offset, string shortname, ulong skinId = 0, string color = "", string name = "")
 	{
-		LuiContainer cont = CreateEmptyContainer(parent, name);
 		ItemDefinition def = ItemManager.FindItemDefinition(shortname);
 		if (def)
-		{
-			cont.SetAnchorAndOffset(position, offset);
-			cont.SetItemIcon(def.itemid, skinId);
-		}
-		else
-		{
-			Interface.Oxide.LogWarning($"[LUI] We couldn't find '{shortname}' as valid item shortname. Ignoring.");
-		}
-		elements.Add(cont);
-		return cont;
+			return CreateItemIcon(parent, position, offset, def.itemid, skinId, color, name);
+		Interface.Oxide.LogWarning($"[LUI] We couldn't find '{shortname}' as valid item shortname. Ignoring.");
+		return null;
 	}
 
-	public LuiContainer CreateItemIcon(LuiContainer container, LuiPosition position, LuiOffset offset, int itemId, ulong skinId = 0, string name = "") => CreateItemIcon(container.name, position, offset, itemId, skinId, name);
-	public LuiContainer CreateItemIcon(LuiContainer container, LuiOffset offset, int itemId, ulong skinId = 0, string name = "") => CreateItemIcon(container.name, LuiPosition.None, offset, itemId, skinId, name);
-	public LuiContainer CreateItemIcon(string parent, LuiOffset offset, int itemId, ulong skinId = 0, string name = "") => CreateItemIcon(parent, LuiPosition.None, offset, itemId, skinId, name);
+	public LuiContainer CreateItemIcon(LuiContainer container, LuiPosition position, LuiOffset offset, int itemId, ulong skinId = 0, string color = "", string name = "") => CreateItemIcon(container.name, position, offset, itemId, skinId, color, name);
+	public LuiContainer CreateItemIcon(LuiContainer container, LuiOffset offset, int itemId, ulong skinId = 0, string color = "", string name = "") => CreateItemIcon(container.name, LuiPosition.None, offset, itemId, skinId, color, name);
+	public LuiContainer CreateItemIcon(string parent, LuiOffset offset, int itemId, ulong skinId = 0, string color = "", string name = "") => CreateItemIcon(parent, LuiPosition.None, offset, itemId, skinId, color, name);
 
-	public LuiContainer CreateItemIcon(string parent, LuiPosition position, LuiOffset offset, int itemId, ulong skinId = 0, string name = "")
+	public LuiContainer CreateItemIcon(string parent, LuiPosition position, LuiOffset offset, int itemId, ulong skinId = 0, string color = "", string name = "")
 	{
 		LuiContainer cont = CreateEmptyContainer(parent, name);
 		cont.SetAnchorAndOffset(position, offset);
 		cont.SetItemIcon(itemId, skinId);
+		if (color != string.Empty)
+			cont.SetColor(color);
 		elements.Add(cont);
 		return cont;
 	}
@@ -276,7 +299,7 @@ public class LUI : IDisposable
 	{
 		LuiContainer cont = CreateEmptyContainer(parent, name);
 		cont.SetAnchorAndOffset(position, offset);
-		cont.SetButton(command, color);
+		cont.SetButton(isProtected ? Community.Protect(command) : command, color);
 		elements.Add(cont);
 		return cont;
 	}
@@ -289,20 +312,21 @@ public class LUI : IDisposable
 	{
 		LuiContainer cont = CreateEmptyContainer(parent, name);
 		cont.SetAnchorAndOffset(position, offset);
-		cont.SetInput(color, text, fontSize, command, charLimit, font, alignment);
+		cont.SetInput(color, text, fontSize, isProtected ? Community.Protect(command) : command, charLimit, font, alignment);
 		elements.Add(cont);
 		return cont;
 	}
 
-	public LuiContainer CreateCountdown(LuiContainer container, LuiPosition position, LuiOffset offset, int startTime, int endTime, float step = 1, float interval = 1, string command = null, bool isProtected = true, string name = "") => CreateCountdown(container.name, position, offset, startTime, endTime, step, interval, command, isProtected, name);
-	public LuiContainer CreateCountdown(LuiContainer container, LuiOffset offset, int startTime, int endTime, float step = 1, float interval = 1, string command = null, bool isProtected = true, string name = "") => CreateCountdown(container.name, LuiPosition.None, offset, startTime, endTime, step, interval, command, isProtected, name);
-	public LuiContainer CreateCountdown(string parent, LuiOffset offset, int startTime, int endTime, float step = 1, float interval = 1, string command = null, bool isProtected = true, string name = "") => CreateCountdown(parent, LuiPosition.None, offset, startTime, endTime, step, interval, command, isProtected, name);
+	public LuiContainer CreateCountdown(LuiContainer container, LuiPosition position, LuiOffset offset, int fontSize, string color, string text, TextAnchor alignment, float startTime, float endTime, float step = 1, float interval = 1, string command = null, bool isProtected = true, string name = "") => CreateCountdown(container.name, position, offset, fontSize, color, text, alignment, startTime, endTime, step, interval, command, isProtected, name);
+	public LuiContainer CreateCountdown(LuiContainer container, LuiOffset offset, int fontSize, string color, string text, TextAnchor alignment, float startTime, float endTime, float step = 1, float interval = 1, string command = null, bool isProtected = true, string name = "") => CreateCountdown(container.name, LuiPosition.None, offset, fontSize, color, text, alignment, startTime, endTime, step, interval, command, isProtected, name);
+	public LuiContainer CreateCountdown(string parent, LuiOffset offset, int fontSize, string color, string text, TextAnchor alignment, float startTime, float endTime, float step = 1, float interval = 1, string command = null, bool isProtected = true, string name = "") => CreateCountdown(parent, LuiPosition.None, offset, fontSize, color, text, alignment, startTime, endTime, step, interval, command, isProtected, name);
 
-	public LuiContainer CreateCountdown(string parent, LuiPosition position, LuiOffset offset, int startTime, int endTime, float step = 1, float interval = 1, string command = null, bool isProtected = true, string name = "")
+	public LuiContainer CreateCountdown(string parent, LuiPosition position, LuiOffset offset, int fontSize, string color, string text, TextAnchor alignment, float startTime, float endTime, float step = 1, float interval = 1, string command = null, bool isProtected = true, string name = "")
 	{
 		LuiContainer cont = CreateEmptyContainer(parent, name);
 		cont.SetAnchorAndOffset(position, offset);
-		cont.SetCountdown(startTime, endTime, step, interval, command);
+		cont.SetText(text, fontSize, color, alignment);
+		cont.SetCountdown(startTime, endTime, step, interval, isProtected ? Community.Protect(command) : command);
 		elements.Add(cont);
 		return cont;
 	}
@@ -348,7 +372,15 @@ public class LUI : IDisposable
 	}
 
 	#endregion
-
+	/// <summary>
+	/// Gets the built UI in bytes. Useful when redrawing whole UI, and we want to minimalize delay between destroy and draw.
+	/// </summary>
+	public byte[] GetUiBytes()
+	{
+		LUIBuilder cbi = new LUIBuilder(this);
+		return cbi.GetMergedBytes();
+	}
+	
 	/// <summary>
 	/// Builds and sends UI to player.
 	/// </summary>
@@ -358,6 +390,12 @@ public class LUI : IDisposable
 	/// Builds and sends UI to player. Preffered SendUi(BasePlayer) over this method.
 	/// </summary>
 	public void SendUiJson(BasePlayer player) => SendJson(new SendInfo(player.net.connection));
+	
+	/// <summary>
+	/// Sends already buit UI to player. Need to run GetUiBytes() in order to get the bytes before.
+	/// </summary>
+	public void SendUiBytes(BasePlayer player, byte[] bytes) => SendBytes(new SendInfo(player.Connection), bytes);
+
 
 	/// <summary>
 	/// Returns string JSON of currently builded UI.
@@ -366,6 +404,27 @@ public class LUI : IDisposable
 	{
 		LUIBuilder cbi = new LUIBuilder(this);
 		return cbi.GetJsonString();
+	}
+
+	private void Send(SendInfo send)
+	{
+		LUIBuilder cbi = new LUIBuilder(this);
+		NetWrite write = Net.sv.StartWrite();
+		write.PacketID(Message.Type.RPCMessage);
+		write.EntityID(CommunityEntity.ServerInstance.net.ID);
+		write.UInt32(StringPool.Get("AddUI"));
+		write.String(cbi.GetJsonString());
+		write.Send(send);
+	}
+
+	private void SendBytes(SendInfo send, byte[] bytes)
+	{
+		NetWrite write = Net.sv.StartWrite();
+		write.PacketID(Message.Type.RPCMessage);
+		write.EntityID(CommunityEntity.ServerInstance.net.ID);
+		write.UInt32(StringPool.Get("AddUI"));
+		write.BytesWithSize(bytes);
+		write.Send(send);
 	}
 
 	private void SendJson(SendInfo send)
@@ -382,6 +441,99 @@ public class LUI : IDisposable
 	public void Dispose()
 	{
 		elements.Clear();
+	}
+	
+	public static string GetFont(CUI.Handler.FontTypes type)
+	{
+		return type switch
+		{
+			CUI.Handler.FontTypes.RobotoCondensedBold => "robotocondensed-bold.ttf",
+			CUI.Handler.FontTypes.RobotoCondensedRegular => "robotocondensed-regular.ttf",
+			CUI.Handler.FontTypes.PermanentMarker => "permanentmarker.ttf",
+			CUI.Handler.FontTypes.DroidSansMono => "droidsansmono.ttf",
+			CUI.Handler.FontTypes.NotoSansArabicBold => "NotoSansArabic-Bold.ttf",
+			_ => "robotocondensed-regular.ttf"
+		};
+	}
+
+	public static string GetAlign(TextAnchor anchor)
+	{
+		return anchor switch
+		{
+			TextAnchor.UpperLeft => nameof(TextAnchor.UpperLeft),
+			TextAnchor.UpperCenter => nameof(TextAnchor.UpperCenter),
+			TextAnchor.UpperRight => nameof(TextAnchor.UpperRight),
+			TextAnchor.MiddleLeft => nameof(TextAnchor.MiddleLeft),
+			TextAnchor.MiddleCenter => nameof(TextAnchor.MiddleCenter),
+			TextAnchor.MiddleRight => nameof(TextAnchor.MiddleRight),
+			TextAnchor.LowerLeft => nameof(TextAnchor.LowerLeft),
+			TextAnchor.LowerCenter => nameof(TextAnchor.LowerCenter),
+			TextAnchor.LowerRight => nameof(TextAnchor.LowerRight),
+			_ => nameof(TextAnchor.UpperLeft)
+		};
+	}
+
+	public static string GetImageType(UnityEngine.UI.Image.Type imgType)
+	{
+		return imgType switch
+		{
+			Image.Type.Simple => nameof(Image.Type.Simple),
+			Image.Type.Sliced => nameof(Image.Type.Sliced),
+			Image.Type.Tiled => nameof(Image.Type.Tiled),
+			Image.Type.Filled => nameof(Image.Type.Filled),
+			_ => nameof(Image.Type.Simple)
+		};
+	}
+
+	public static string GetWrapMode(VerticalWrapMode mode)
+	{
+		return mode switch
+		{
+			VerticalWrapMode.Truncate => nameof(VerticalWrapMode.Truncate),
+			VerticalWrapMode.Overflow => nameof(VerticalWrapMode.Overflow),
+			_ => nameof(VerticalWrapMode.Truncate)
+		};
+	}
+
+	public static string GetLineType(InputField.LineType lineType)
+	{
+		return lineType switch
+		{
+			InputField.LineType.SingleLine => nameof(InputField.LineType.SingleLine),
+			InputField.LineType.MultiLineSubmit => nameof(InputField.LineType.MultiLineSubmit),
+			InputField.LineType.MultiLineNewline => nameof(InputField.LineType.MultiLineNewline),
+			_ => nameof(InputField.LineType.SingleLine)
+		};
+	}
+
+	public static string GetMovementType(ScrollRect.MovementType movementType)
+	{
+		return movementType switch
+		{
+			ScrollRect.MovementType.Unrestricted => nameof(ScrollRect.MovementType.Unrestricted),
+			ScrollRect.MovementType.Elastic => nameof(ScrollRect.MovementType.Elastic),
+			ScrollRect.MovementType.Clamped => nameof(ScrollRect.MovementType.Clamped),
+			_ => nameof(ScrollRect.MovementType.Unrestricted)
+		};
+	}
+
+	public static string GetTimerFormat(TimerFormat format)
+	{
+		return format switch
+		{
+			TimerFormat.None => nameof(TimerFormat.None),
+			TimerFormat.SecondsHundreth => nameof(TimerFormat.SecondsHundreth),
+			TimerFormat.MinutesSeconds => nameof(TimerFormat.MinutesSeconds),
+			TimerFormat.MinutesSecondsHundreth => nameof(TimerFormat.MinutesSecondsHundreth),
+			TimerFormat.HoursMinutes => nameof(TimerFormat.HoursMinutes),
+			TimerFormat.HoursMinutesSeconds => nameof(TimerFormat.HoursMinutesSeconds),
+			TimerFormat.HoursMinutesSecondsMilliseconds => nameof(TimerFormat.HoursMinutesSecondsMilliseconds),
+			TimerFormat.HoursMinutesSecondsTenths => nameof(TimerFormat.HoursMinutesSecondsTenths),
+			TimerFormat.DaysHoursMinutes => nameof(TimerFormat.DaysHoursMinutes),
+			TimerFormat.DaysHoursMinutesSeconds => nameof(TimerFormat.DaysHoursMinutesSeconds),
+			TimerFormat.Custom => nameof(TimerFormat.Custom),
+			_ => nameof(TimerFormat.None)
+		};
 	}
 
 	public class LuiContainer
@@ -494,7 +646,7 @@ public class LUI : IDisposable
 				if (color != null)
 					text.color = color;
 				if (!update)
-					text.align = nameof(alignment);
+					text.align = GetAlign(alignment);
 			}
 			else
 			{
@@ -505,7 +657,7 @@ public class LUI : IDisposable
 				if (color != null)
 					text.color = color;
 				if (!update)
-					text.align = nameof(alignment);
+					text.align = GetAlign(alignment);
 				luiComponents.Add(text.type, text);
 			}
 			return this;
@@ -530,12 +682,12 @@ public class LUI : IDisposable
 		{
 			if (luiComponents.TryGetValue<LuiTextComp>(LuiCompType.Text, out var text))
 			{
-				text.font = nameof(font);
+				text.font = GetFont(font);
 			}
 			else
 			{
 				text = new();
-				text.font = nameof(font);
+				text.font = GetFont(font);
 				luiComponents.Add(text.type, text);
 			}
 			return this;
@@ -545,12 +697,12 @@ public class LUI : IDisposable
 		{
 			if (luiComponents.TryGetValue<LuiTextComp>(LuiCompType.Text, out var text))
 			{
-				text.align = nameof(align);
+				text.align = GetAlign(align);
 			}
 			else
 			{
 				text = new();
-				text.align = nameof(align);
+				text.align = GetAlign(align);
 				luiComponents.Add(text.type, text);
 			}
 			return this;
@@ -560,12 +712,12 @@ public class LUI : IDisposable
 		{
 			if (luiComponents.TryGetValue<LuiTextComp>(LuiCompType.Text, out var text))
 			{
-				text.verticalOverflow = nameof(verticalOverflow);
+				text.verticalOverflow = GetWrapMode(verticalOverflow);
 			}
 			else
 			{
 				text = new();
-				text.verticalOverflow = nameof(verticalOverflow);
+				text.verticalOverflow = GetWrapMode(verticalOverflow);
 				luiComponents.Add(text.type, text);
 			}
 			return this;
@@ -605,6 +757,21 @@ public class LUI : IDisposable
 			return this;
 		}
 
+		public LuiContainer SetImageType(UnityEngine.UI.Image.Type imageType)
+		{
+			if (luiComponents.TryGetValue<LuiImageComp>(LuiCompType.Image, out var img))
+			{
+				img.imageType = GetImageType(imageType);
+			}
+			else
+			{
+				img = new();
+				img.imageType = GetImageType(imageType);
+				luiComponents.Add(img.type, img);
+			}
+			return this;
+		}
+
 		public LuiContainer SetSprite(string sprite = null, string color = null, UnityEngine.UI.Image.Type imageType = Image.Type.Simple)
 		{
 			if (luiComponents.TryGetValue<LuiImageComp>(LuiCompType.Image, out var img))
@@ -612,7 +779,7 @@ public class LUI : IDisposable
 				if (sprite != null)
 				{
 					img.sprite = sprite;
-					img.imageType = nameof(imageType);
+					img.imageType = GetImageType(imageType);
 				}
 				if (color != null)
 					img.color = color;
@@ -623,7 +790,7 @@ public class LUI : IDisposable
 				if (sprite != null)
 				{
 					img.sprite = sprite;
-					img.imageType = nameof(imageType);
+					img.imageType = GetImageType(imageType);
 				}
 				if (color != null)
 					img.color = color;
@@ -632,11 +799,11 @@ public class LUI : IDisposable
 			return this;
 		}
 
-		public LuiContainer SetImage(uint png = 0, string color = null)
+		public LuiContainer SetImage(string png = null, string color = null)
 		{
 			if (luiComponents.TryGetValue<LuiImageComp>(LuiCompType.Image, out var img))
 			{
-				if (png != 0)
+				if (png != null)
 					img.png = png;
 				if (color != null)
 					img.color = color;
@@ -644,7 +811,7 @@ public class LUI : IDisposable
 			else
 			{
 				img = new();
-				if (png != 0)
+				if (png != null)
 					img.png = png;
 				if (color != null)
 					img.color = color;
@@ -695,7 +862,28 @@ public class LUI : IDisposable
 			return this;
 		}
 
-		public LuiContainer SetSteamIcon(ulong steamid, string color = null)
+		public LuiContainer SetRawImage(string png = null, string color = null)
+		{
+			if (luiComponents.TryGetValue<LuiRawImageComp>(LuiCompType.RawImage, out var img))
+			{
+				if (png != null)
+					img.png = png;
+				if (color != null)
+					img.color = color;
+			}
+			else
+			{
+				img = new();
+				if (png != null)
+					img.png = png;
+				if (color != null)
+					img.color = color;
+				luiComponents.Add(img.type, img);
+			}
+			return this;
+		}
+
+		public LuiContainer SetSteamIcon(string steamid, string color = null)
 		{
 			if (luiComponents.TryGetValue<LuiRawImageComp>(LuiCompType.RawImage, out var img))
 			{
@@ -842,13 +1030,13 @@ public class LUI : IDisposable
 			if (luiComponents.TryGetValue<LuiButtonComp>(LuiCompType.Button, out var button))
 			{
 				button.sprite = sprite;
-				button.imageType = nameof(imageType);
+				button.imageType = GetImageType(imageType);
 			}
 			else
 			{
 				button = new();
 				button.sprite = sprite;
-				button.imageType = nameof(imageType);
+				button.imageType = GetImageType(imageType);
 				luiComponents.Add(button.type, button);
 			}
 			return this;
@@ -912,8 +1100,8 @@ public class LUI : IDisposable
 					input.characterLimit = charLimit;
 				if (!update)
 				{
-					input.align = nameof(alignment);
-					input.font = nameof(font);
+					input.align = GetAlign(alignment);
+					input.font = GetFont(font);
 				}
 			}
 			else
@@ -931,8 +1119,8 @@ public class LUI : IDisposable
 					input.characterLimit = charLimit;
 				if (!update)
 				{
-					input.align = nameof(alignment);
-					input.font = nameof(font);
+					input.align = GetAlign(alignment);
+					input.font = GetFont(font);
 				}
 				luiComponents.Add(input.type, input);
 			}
@@ -1005,12 +1193,12 @@ public class LUI : IDisposable
 		{
 			if (luiComponents.TryGetValue<LuiInputComp>(LuiCompType.InputField, out var input))
 			{
-				input.lineType = nameof(lineType);
+				input.lineType = GetLineType(lineType);
 			}
 			else
 			{
 				input = new();
-				input.lineType = nameof(lineType);
+				input.lineType = GetLineType(lineType);
 				luiComponents.Add(input.type, input);
 			}
 			return this;
@@ -1115,7 +1303,7 @@ public class LUI : IDisposable
 
 		#region Container Methods - LuiCountdownComp
 
-		public LuiContainer SetCountdown(int startTime, int endTime, float step = 1, float interval = 1, string command = null)
+		public LuiContainer SetCountdown(float startTime, float endTime, float step = 1, float interval = 1, string command = null, string numberFormat = null)
 		{
 			if (luiComponents.TryGetValue<LuiCountdownComp>(LuiCompType.Countdown, out var countdown))
 			{
@@ -1127,6 +1315,8 @@ public class LUI : IDisposable
 					countdown.interval = interval;
 				if (command != null)
 					countdown.command = command;
+				if (numberFormat != null)
+					countdown.numberFormat = numberFormat;
 			}
 			else
 			{
@@ -1139,6 +1329,38 @@ public class LUI : IDisposable
 					countdown.interval = interval;
 				if (command != null)
 					countdown.command = command;
+				if (numberFormat != null)
+					countdown.numberFormat = numberFormat;
+				luiComponents.Add(countdown.type, countdown);
+			}
+			return this;
+		}
+
+		public LuiContainer SetCountdownDestroy(bool destroy)
+		{
+			if (luiComponents.TryGetValue<LuiCountdownComp>(LuiCompType.Countdown, out var countdown))
+			{
+				countdown.destroyIfDone = destroy;
+			}
+			else
+			{
+				countdown = new();
+				countdown.destroyIfDone = destroy;
+				luiComponents.Add(countdown.type, countdown);
+			}
+			return this;
+		}
+
+		public LuiContainer SetCountdownTimerFormat(TimerFormat format)
+		{
+			if (luiComponents.TryGetValue<LuiCountdownComp>(LuiCompType.Countdown, out var countdown))
+			{
+				countdown.timerFormat = GetTimerFormat(format);
+			}
+			else
+			{
+				countdown = new();
+				countdown.timerFormat = GetTimerFormat(format);
 				luiComponents.Add(countdown.type, countdown);
 			}
 			return this;
@@ -1223,7 +1445,7 @@ public class LUI : IDisposable
 				{
 					scroll.vertical = vertical;
 					scroll.horizontal = horizontal;
-					scroll.movementType = nameof(movementType);
+					scroll.movementType = GetMovementType(movementType);
 					scroll.inertia = inertia;
 				}
 				if (elasticity != 0)
@@ -1242,7 +1464,7 @@ public class LUI : IDisposable
 				{
 					scroll.vertical = vertical;
 					scroll.horizontal = horizontal;
-					scroll.movementType = nameof(movementType);
+					scroll.movementType = GetMovementType(movementType);
 					scroll.inertia = inertia;
 				}
 				if (elasticity != 0)
@@ -1486,7 +1708,7 @@ public class LuiImageComp : LuiCompBase
 	public string material;
 	public string color;
 	public string imageType;
-	public uint png;
+	public string png;
 	public int itemid;
 	public ulong skinid;
 
@@ -1502,7 +1724,8 @@ public class LuiRawImageComp : LuiCompBase
 	public string color;
 	public string material;
 	public string url;
-	public ulong steamid;
+	public string png;
+	public string steamid;
 
 	public LuiRawImageComp()
 	{
