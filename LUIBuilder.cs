@@ -547,7 +547,7 @@ public class LUIBuilder
     public byte[] GetMergedBytes()
     {
 	    string stringJson = JsonConvert.SerializeObject(elements, Formatting.None, _cuiSettings).Replace("\\n", "\n");
-	    return Encoding.ASCII.GetBytes(stringJson);
+	    return Encoding.UTF8.GetBytes(stringJson);
     }
     
     private Dictionary<string, object> WriteScrollBar(LuiScrollbar scroll)

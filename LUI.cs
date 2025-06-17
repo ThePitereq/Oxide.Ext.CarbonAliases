@@ -1489,6 +1489,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
+				scroll = new();
 				scroll.anchor = pos;
 				scroll.offset = offset;
 				luiComponents.Add(scroll.type, scroll);
