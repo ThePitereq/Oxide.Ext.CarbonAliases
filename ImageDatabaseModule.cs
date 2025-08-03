@@ -27,7 +27,7 @@ namespace Oxide.Ext.CarbonAliases
                 if (images.ContainsKey(url)) continue;
                 images.Add(url, url);
             }
-            ImageLibrary.Call("ImportImageList", "CarbonAliasesRequest", images, 0UL, @override, () => onComplete(null));
+            ImageLibrary.Call("ImportImageList", "CarbonAliasesRequest", images, 0UL, @override, () => onComplete?.Invoke(null));
             Pool.FreeUnmanaged(ref images);
         }
 
