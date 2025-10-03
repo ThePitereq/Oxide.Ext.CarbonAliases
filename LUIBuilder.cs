@@ -22,6 +22,11 @@ public class LUIBuilder
 		    LuiCompType.NeedsCursor => "NeedsCursor",
 		    LuiCompType.RectTransform => "RectTransform",
 		    LuiCompType.Countdown => "Countdown",
+		    LuiCompType.HorizontalLayoutGroup => "UnityEngine.UI.HorizontalLayoutGroup",
+		    LuiCompType.VerticalLayoutGroup => "UnityEngine.UI.VerticalLayoutGroup",
+		    LuiCompType.GridLayoutGroup => "UnityEngine.UI.GridLayoutGroup",
+		    LuiCompType.ContentSizeFitter => "UnityEngine.UI.ContentSizeFitter",
+		    LuiCompType.LayoutElement => "UnityEngine.UI.LayoutElement",
 		    LuiCompType.Draggable => "Draggable",
 		    LuiCompType.Slot  => "Slot",
 		    LuiCompType.NeedsKeyboard => "NeedsKeyboard",
@@ -59,6 +64,10 @@ public class LUIBuilder
 	            if (component.fadeIn > 0)
 	            {
 		            compBuilder.Add("fadeIn", component.fadeIn);
+	            }
+	            if (component.placeholderParentId != null)
+	            {
+		            compBuilder.Add("placeholderParentId", component.placeholderParentId);
 	            }
 	            switch (component.type)
                 {
@@ -116,18 +125,26 @@ public class LUIBuilder
 	                    {
 		                    compBuilder.Add("imagetype", image.imageType);
 	                    }
+	                    if (image.fillCenter)
+	                    {
+		                    
+		                    compBuilder.Add("fillCenter", true);
+	                    }
 	                    if (image.png != null)
 	                    {
 		                    compBuilder.Add("png", image.png);
 	                    }
-	                    if (image.itemid != 0)
+	                    if (image.slice != null)
 	                    {
 		                    
+		                    compBuilder.Add("slice", image.slice);
+	                    }
+	                    if (image.itemid != 0)
+	                    {
 		                    compBuilder.Add("itemid", image.itemid);
 	                    }
 	                    if (image.skinid != 0)
 	                    {
-		                    
 		                    compBuilder.Add("skinid", image.skinid);
 	                    }
 	                    break;
@@ -136,22 +153,18 @@ public class LUIBuilder
 	                    
 	                    if (rawImage.sprite != null)
 	                    {
-		                    
 		                    compBuilder.Add("sprite", rawImage.sprite);
 	                    }
 	                    if (rawImage.color != null)
 	                    {
-		                    
 		                    compBuilder.Add("color", rawImage.color);
 	                    }
 	                    if (rawImage.material != null)
 	                    {
-		                    
 		                    compBuilder.Add("material", rawImage.material);
 	                    }
 	                    if (rawImage.url != null)
 	                    {
-		                    
 		                    compBuilder.Add("url", rawImage.url);
 	                    }
 	                    if (rawImage.png != null)
@@ -168,67 +181,54 @@ public class LUIBuilder
 	                    
 	                    if (button.command != null)
 	                    {
-		                    
 		                    compBuilder.Add("command", button.command);
 	                    }
 	                    if (button.close != null)
 	                    {
-		                    
 		                    compBuilder.Add("close", button.close);
 	                    }
 	                    if (button.sprite != null)
 	                    {
-		                    
 		                    compBuilder.Add("sprite", button.sprite);
 	                    }
 	                    if (button.material != null)
 	                    {
-		                    
 		                    compBuilder.Add("material", button.material);
 	                    }
 	                    if (button.color != null)
 	                    {
-		                    
 		                    compBuilder.Add("color", button.color);
 	                    }
 	                    if (button.imageType != null)
 	                    {
-		                    
 		                    compBuilder.Add("imagetype", button.imageType);
 	                    }
 	                    if (button.normalColor != null)
 	                    {
-		                    
 		                    compBuilder.Add("normalColor", button.normalColor);
 	                    }
 	                    if (button.highlightedColor != null)
 	                    {
-		                    
 		                    compBuilder.Add("highlightedColor", button.highlightedColor);
 	                    }
 	                    if (button.pressedColor != null)
 	                    {
-		                    
 		                    compBuilder.Add("pressedColor", button.pressedColor);
 	                    }
 	                    if (button.selectedColor != null)
 	                    {
-		                    
 		                    compBuilder.Add("selectedColor", button.selectedColor);
 	                    }
 	                    if (button.disabledColor != null)
 	                    {
-		                    
 		                    compBuilder.Add("disabledColor", button.disabledColor);
 	                    }
 	                    if (button.colorMultiplier != -1)
 	                    {
-		                    
 		                    compBuilder.Add("colorMultiplier", button.colorMultiplier);
 	                    }
 	                    if (button.fadeDuration != -1)
 	                    {
-		                    
 		                    compBuilder.Add("fadeDuration", button.fadeDuration);
 	                    }
 	                    break;
@@ -294,6 +294,11 @@ public class LUIBuilder
 		                    
 		                    compBuilder.Add("readOnly", true);
 	                    }
+	                    if (input.placeholderId != null)
+	                    {
+		                    
+		                    compBuilder.Add("placeholderId", input.placeholderId);
+	                    }
 	                    if (input.lineType != null)
 	                    {
 		                    
@@ -334,6 +339,11 @@ public class LUIBuilder
                         compBuilder.Add("offsetmin", VectorToString(rect.offset.offsetMin));
                         
                         compBuilder.Add("offsetmax", VectorToString(rect.offset.offsetMax));
+                        if (rect.rotation != 0)
+                        {
+	                        
+	                        compBuilder.Add("rotation", rect.rotation);
+                        }
                         if (rect.setParent != null)
                         {
 	                        
@@ -387,6 +397,196 @@ public class LUIBuilder
 	                    {
 		                    
 		                    compBuilder.Add("command", countdown.command);
+	                    }
+	                    break;
+                    case LuiCompType.HorizontalLayoutGroup:
+	                    LuiHorizontalLayoutGroupComp horizontalLayoutGroup = component as LuiHorizontalLayoutGroupComp;
+	                    if (horizontalLayoutGroup.spacing != 0)
+	                    {
+		                    
+		                    compBuilder.Add("spacing", horizontalLayoutGroup.spacing);
+	                    }
+	                    if (horizontalLayoutGroup.childAlignment != null)
+	                    {
+		                    
+		                    compBuilder.Add("childAlignment", horizontalLayoutGroup.childAlignment);
+	                    }
+	                    if (!horizontalLayoutGroup.childForceExpandWidth)
+	                    {
+		                    
+		                    compBuilder.Add("childForceExpandWidth", false);
+	                    }
+	                    if (!horizontalLayoutGroup.childForceExpandHeight)
+	                    {
+		                    
+		                    compBuilder.Add("childForceExpandHeight", false);
+	                    }
+	                    if (horizontalLayoutGroup.childControlWidth)
+	                    {
+		                    
+		                    compBuilder.Add("childControlWidth", true);
+	                    }
+	                    if (horizontalLayoutGroup.childControlHeight)
+	                    {
+		                    
+		                    compBuilder.Add("childControlHeight", true);
+	                    }
+	                    if (horizontalLayoutGroup.childScaleWidth)
+	                    {
+		                    
+		                    compBuilder.Add("childScaleWidth", true);
+	                    }
+	                    if (horizontalLayoutGroup.childScaleHeight)
+	                    {
+		                    
+		                    compBuilder.Add("childScaleHeight", true);
+	                    }
+	                    if (horizontalLayoutGroup.padding != null)
+	                    {
+		                    
+		                    compBuilder.Add("padding", horizontalLayoutGroup.padding);
+	                    }
+	                    break;
+                    case LuiCompType.VerticalLayoutGroup:
+	                    LuiVerticalLayoutGroupComp verticalLayoutGroup = component as LuiVerticalLayoutGroupComp;
+	                    if (verticalLayoutGroup.spacing != 0)
+	                    {
+		                    
+		                    compBuilder.Add("spacing", verticalLayoutGroup.spacing);
+	                    }
+	                    if (verticalLayoutGroup.childAlignment != null)
+	                    {
+		                    
+		                    compBuilder.Add("childAlignment", verticalLayoutGroup.childAlignment);
+	                    }
+	                    if (!verticalLayoutGroup.childForceExpandWidth)
+	                    {
+		                    
+		                    compBuilder.Add("childForceExpandWidth", false);
+	                    }
+	                    if (!verticalLayoutGroup.childForceExpandHeight)
+	                    {
+		                    
+		                    compBuilder.Add("childForceExpandHeight", false);
+	                    }
+	                    if (verticalLayoutGroup.childControlWidth)
+	                    {
+		                    
+		                    compBuilder.Add("childControlWidth", true);
+	                    }
+	                    if (verticalLayoutGroup.childControlHeight)
+	                    {
+		                    
+		                    compBuilder.Add("childControlHeight", true);
+	                    }
+	                    if (verticalLayoutGroup.childScaleWidth)
+	                    {
+		                    
+		                    compBuilder.Add("childScaleWidth", true);
+	                    }
+	                    if (verticalLayoutGroup.childScaleHeight)
+	                    {
+		                    
+		                    compBuilder.Add("childScaleHeight", true);
+	                    }
+	                    if (verticalLayoutGroup.padding != null)
+	                    {
+		                    
+		                    compBuilder.Add("padding", verticalLayoutGroup.padding);
+	                    }
+	                    break;
+                    case LuiCompType.GridLayoutGroup:
+	                    LuiGridLayoutGroupComp gridLayoutGroup = component as LuiGridLayoutGroupComp;
+	                    if (gridLayoutGroup.cellSize != new Vector2(100, 100))
+	                    {
+		                    
+		                    compBuilder.Add("cellSize", gridLayoutGroup.cellSize);
+	                    }
+	                    if (gridLayoutGroup.spacing != default)
+	                    {
+		                    
+		                    compBuilder.Add("spacing", gridLayoutGroup.spacing);
+	                    }
+	                    if (gridLayoutGroup.startCorner != null)
+	                    {
+		                    
+		                    compBuilder.Add("startCorner", gridLayoutGroup.startCorner);
+	                    }
+	                    if (gridLayoutGroup.startAxis != null)
+	                    {
+		                    
+		                    compBuilder.Add("startAxis", gridLayoutGroup.startAxis);
+	                    }
+	                    if (gridLayoutGroup.childAlignment != null)
+	                    {
+		                    
+		                    compBuilder.Add("childAlignment", gridLayoutGroup.childAlignment);
+	                    }
+	                    if (gridLayoutGroup.constraint != null)
+	                    {
+		                    
+		                    compBuilder.Add("constraint", gridLayoutGroup.constraint);
+	                    }
+	                    if (gridLayoutGroup.constraintCount != 0)
+	                    {
+		                    
+		                    compBuilder.Add("constraintCount", gridLayoutGroup.constraintCount);
+	                    }
+	                    if (gridLayoutGroup.padding != null)
+	                    {
+		                    
+		                    compBuilder.Add("padding", gridLayoutGroup.padding);
+	                    }
+	                    break;
+                    case LuiCompType.ContentSizeFitter:
+	                    LuiContentSizeFitterComp contentSizeFitter = component as LuiContentSizeFitterComp;
+	                    if (contentSizeFitter.horizontalFit != null)
+	                    {
+		                    
+		                    compBuilder.Add("horizontalFit", contentSizeFitter.horizontalFit);
+	                    }
+	                    if (contentSizeFitter.verticalFit != null)
+	                    {
+		                    
+		                    compBuilder.Add("verticalFit", contentSizeFitter.verticalFit);
+	                    }
+	                    break;
+                    case LuiCompType.LayoutElement:
+	                    LuiLayoutElementComp layoutElement = component as LuiLayoutElementComp;
+	                    if (layoutElement.preferredWidth != -1)
+	                    {
+		                    
+		                    compBuilder.Add("preferredWidth", layoutElement.preferredWidth);
+	                    }
+	                    if (layoutElement.preferredHeight != -1)
+	                    {
+		                    
+		                    compBuilder.Add("preferredHeight", layoutElement.preferredHeight);
+	                    }
+	                    if (layoutElement.minWidth != 0)
+	                    {
+		                    
+		                    compBuilder.Add("minWidth", layoutElement.minWidth);
+	                    }
+	                    if (layoutElement.minHeight != 0)
+	                    {
+		                    
+		                    compBuilder.Add("minHeight", layoutElement.minHeight);
+	                    }
+	                    if (layoutElement.flexibleWidth != 0)
+	                    {
+		                    
+		                    compBuilder.Add("flexibleWidth", layoutElement.flexibleWidth);
+	                    }
+	                    if (layoutElement.flexibleHeight != 0)
+	                    {
+		                    
+		                    compBuilder.Add("flexibleHeight", layoutElement.flexibleHeight);
+	                    }
+	                    if (layoutElement.ignoreLayout)
+	                    {
+		                    
+		                    compBuilder.Add("ignoreLayout", true);
 	                    }
 	                    break;
                     case LuiCompType.Draggable:
@@ -472,7 +672,7 @@ public class LUIBuilder
 	                    
 	                    bool changeAnchor = scroll.anchor != LuiPosition.Full;
 	                    bool changeOffset = scroll.offset != LuiOffset.None;
-	                    if (changeAnchor || changeOffset)
+	                    if (changeAnchor || changeOffset || scroll.pivot != new Vector2(0.5f, 0.5f))
 	                    {
 		                    
 		                    Dictionary<string, string> transform = new();
@@ -489,6 +689,11 @@ public class LUIBuilder
 				                    transform.Add("offsetmin", VectorToString(scroll.offset.offsetMin));
 			                    
 			                    transform.Add("offsetmax", VectorToString(scroll.offset.offsetMax));
+		                    }
+		                    if (scroll.pivot != new Vector2(0.5f, 0.5f))
+		                    {
+			                    
+			                    compBuilder.Add("pivot", scroll.pivot);
 		                    }
 		                    compBuilder.Add("contentTransform", transform);
 	                    }
@@ -535,6 +740,16 @@ public class LUIBuilder
 	                    if (scroll.vertical)
 	                    {
 		                    compBuilder.Add("verticalScrollbar", WriteScrollBar(scroll.verticalScrollbar));
+	                    }
+	                    if (scroll.horizontalNormalizedPosition != 0)
+	                    {
+		                    
+		                    compBuilder.Add("horizontalNormalizedPosition", scroll.horizontalNormalizedPosition);
+	                    }
+	                    if (scroll.verticalNormalizedPosition != 0)
+	                    {
+		                    
+		                    compBuilder.Add("verticalNormalizedPosition", scroll.verticalNormalizedPosition);
 	                    }
 	                    break;
                 }
