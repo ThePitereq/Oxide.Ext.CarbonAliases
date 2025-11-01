@@ -595,7 +595,7 @@ public class LUIBuilder
 	                    if (draggable.limitToParent)
 	                    {
 		                    
-		                    compBuilder.Add("endTime", true);
+		                    compBuilder.Add("limitToParent", true);
 	                    }
 	                    if (draggable.maxDistance > 0)
 	                    {
@@ -615,7 +615,7 @@ public class LUIBuilder
 	                    if (draggable.dragAlpha != -1)
 	                    {
 		                    
-		                    compBuilder.Add("maxDistance", draggable.maxDistance);
+		                    compBuilder.Add("dragAlpha", draggable.dragAlpha);
 	                    }
 	                    if (draggable.parentLimitIndex != -1)
 	                    {
