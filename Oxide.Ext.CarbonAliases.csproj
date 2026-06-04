@@ -32,64 +32,113 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="BaseModule.cs" />
+    <Compile Include="CarbonExtension.cs" />
+    <Compile Include="Community.cs" />
+    <Compile Include="CUI.cs" />
+    <Compile Include="CustomVitalManager.cs" />
+    <Compile Include="ImageDatabaseModule.cs" />
+    <Compile Include="LUI.cs" />
+    <Compile Include="LUIBuilder.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\0Harmony.dll</HintPath>
+    </Reference>
     <Reference Include="Assembly-CSharp">
-      <HintPath>G:\RustServers\Oxide\RustDedicated_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp-firstpass">
-      <HintPath>G:\RustServers\Oxide\RustDedicated_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
     </Reference>
     <Reference Include="Facepunch.Network">
       <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\Facepunch.Network.dll</HintPath>
     </Reference>
     <Reference Include="Facepunch.System">
-      <HintPath>G:\RustServers\Oxide\RustDedicated_Data\Managed\Facepunch.System.dll</HintPath>
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\Facepunch.System.dll</HintPath>
+    </Reference>
+    <Reference Include="Facepunch.Unity">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\Facepunch.Unity.dll</HintPath>
     </Reference>
     <Reference Include="Facepunch.UnityEngine">
-      <HintPath>G:\RustServers\Oxide\RustDedicated_Data\Managed\Facepunch.UnityEngine.dll</HintPath>
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\Facepunch.UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Win32.Registry">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\Microsoft.Win32.Registry.dll</HintPath>
+    </Reference>
+    <Reference Include="mscorlib">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\mscorlib.dll</HintPath>
+    </Reference>
+    <Reference Include="netstandard">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\netstandard.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>G:\RustServers\Oxide\RustDedicated_Data\Managed\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="Oxide.Core">
-      <HintPath>G:\RustServers\Oxide\RustDedicated_Data\Managed\Oxide.Core.dll</HintPath>
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\Oxide.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Oxide.MySql">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\Oxide.MySql.dll</HintPath>
     </Reference>
     <Reference Include="Oxide.Rust">
-      <HintPath>G:\RustServers\Oxide\RustDedicated_Data\Managed\Oxide.Rust.dll</HintPath>
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\Oxide.Rust.dll</HintPath>
     </Reference>
     <Reference Include="Rust.Data">
       <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\Rust.Data.dll</HintPath>
     </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
+    <Reference Include="Rust.Global">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\Rust.Global.dll</HintPath>
+    </Reference>
+    <Reference Include="System">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\System.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Buffers">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Core">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\System.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="System.IO.Compression">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\System.IO.Compression.dll</HintPath>
+    </Reference>
+    <Reference Include="System.IO.FileSystem.AccessControl">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\System.IO.FileSystem.AccessControl.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Memory">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\System.Memory.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics.Vectors">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\System.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Security.AccessControl">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\System.Security.AccessControl.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Security.Principal.Windows">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\System.Security.Principal.Windows.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>G:\RustServers\Oxide\RustDedicated_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>G:\RustServers\Oxide\RustDedicated_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.TextRenderingModule">
-      <HintPath>G:\RustServers\Oxide\RustDedicated_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
     </Reference>
-    <Reference Include="UnityEngine.UI, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>G:\RustServers\Oxide\RustDedicated_Data\Managed\UnityEngine.UI.dll</HintPath>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\UnityEngine.UI.dll</HintPath>
     </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="BaseModule.cs" />
-    <Compile Include="CarbonExtension.cs" />
-    <Compile Include="Community.cs" />
-    <Compile Include="CUI.cs" />
-    <Compile Include="ImageDatabaseModule.cs" />
-    <Compile Include="LUI.cs" />
-    <Compile Include="LUIBuilder.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>..\..\RustServers\Oxide\RustDedicated_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

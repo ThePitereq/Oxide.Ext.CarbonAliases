@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Network;
 using Oxide.Core;
 using Oxide.Game.Rust.Cui;
@@ -11,11 +12,14 @@ namespace Oxide.Ext.CarbonAliases;
 
 public class LUI : IDisposable
 {
-	public readonly List<LuiContainer> elements = new();
+	//Code from Carbon made by ThePitereq
+	//Source: https://github.com/CarbonCommunity/Carbon.Common/blob/develop/src/Carbon/Components/LUI.cs
 	
-	private ImageDatabaseModule imgDb;
+	public readonly List<LuiContainer> elements = new();
 
 	private readonly CUI _parent;
+
+	private ImageDatabaseModule imgDb { get; }
 
 	/// <summary>
 	/// Boolean that changes default generation of element names.
@@ -34,6 +38,9 @@ public class LUI : IDisposable
 	/// </summary>
 	public string lastName = string.Empty;
 
+	public static readonly Vector2 defaultPivot = new(0.5f, 0.5f);
+	public static readonly Vector2 defaultCellSize = new(100, 100);
+
 	#region Core Panel
 
 	public LuiContainer CreateParent(CUI.ClientPanels parent, LuiPosition position, string name = "") => CreateParent(_parent.GetClientPanel(parent), position, name);
@@ -41,12 +48,12 @@ public class LUI : IDisposable
 	public LuiContainer CreateParent(LuiContainer container, LuiPosition position, string name = "") => CreateParent(container.name, position, name);
 	public LuiContainer CreateParent(string parent, LuiPosition position, string name = "")
 	{
-		LuiContainer cont = new();
+		LuiContainer cont = LuiPool.GetContainer();
 		cont.parent = parent;
 		if (name != string.Empty)
 			cont.name = name;
 		else if (generateNames)
-			cont.name = _parent.AppendId();
+			cont.name = _parent.Manager.AppendId();
 		cont.SetAnchors(position);
 		elements.Add(cont);
 		return cont;
@@ -58,7 +65,7 @@ public class LUI : IDisposable
 
 	public LuiContainer UpdatePosition(string name, LuiPosition pos)
 	{
-		LuiContainer cont = new();
+		LuiContainer cont = LuiPool.GetContainer();
 		cont.name = name;
 		cont.update = true;
 		cont.SetAnchors(pos);
@@ -68,7 +75,7 @@ public class LUI : IDisposable
 
 	public LuiContainer UpdatePosition(string name, LuiOffset off)
 	{
-		LuiContainer cont = new();
+		LuiContainer cont = LuiPool.GetContainer();
 		cont.name = name;
 		cont.update = true;
 		cont.SetOffset(off);
@@ -78,7 +85,7 @@ public class LUI : IDisposable
 
 	public LuiContainer UpdatePosition(string name, LuiPosition pos, LuiOffset off)
 	{
-		LuiContainer cont = new();
+		LuiContainer cont = LuiPool.GetContainer();
 		cont.name = name;
 		cont.update = true;
 		cont.SetAnchorAndOffset(pos, off);
@@ -88,7 +95,7 @@ public class LUI : IDisposable
 
 	public LuiContainer UpdateRotation(string name, float rotation)
 	{
-		LuiContainer cont = new();
+		LuiContainer cont = LuiPool.GetContainer();
 		cont.name = name;
 		cont.update = true;
 		cont.SetRotation(rotation);
@@ -101,7 +108,7 @@ public class LUI : IDisposable
 	/// </summary>
 	public LuiContainer Update(string name)
 	{
-		LuiContainer cont = new();
+		LuiContainer cont = LuiPool.GetContainer();
 		cont.name = name;
 		cont.update = true;
 		elements.Add(cont);
@@ -110,7 +117,7 @@ public class LUI : IDisposable
 
 	public LuiContainer UpdateColor(string name, string color)
 	{
-		LuiContainer cont = new();
+		LuiContainer cont = LuiPool.GetContainer();
 		cont.name = name;
 		cont.update = true;
 		cont.SetColor(color);
@@ -120,7 +127,7 @@ public class LUI : IDisposable
 
 	public LuiContainer UpdateText(string name, string text, int fontSize = 0, string color = null)
 	{
-		LuiContainer cont = new();
+		LuiContainer cont = LuiPool.GetContainer();
 		cont.name = name;
 		cont.update = true;
 		cont.SetText(text, fontSize, color, update: true);
@@ -130,10 +137,10 @@ public class LUI : IDisposable
 
 	public LuiContainer UpdateButtonCommand(string name, string command, bool isProtected = true)
 	{
-		LuiContainer cont = new();
+		LuiContainer cont = LuiPool.GetContainer();
 		cont.name = name;
 		cont.update = true;
-		cont.SetButton(command);
+		cont.SetButton(isProtected ? Community.Protect(command) : command);
 		elements.Add(cont);
 		return cont;
 	}
@@ -150,7 +157,7 @@ public class LUI : IDisposable
 	/// </summary>
 	public LuiContainer CreateEmptyContainer(string parent, string name = "", bool add = false)
 	{
-		LuiContainer cont = new();
+		LuiContainer cont = LuiPool.GetContainer();
 		cont.parent = parent;
 		if (name != string.Empty)
 			cont.name = name;
@@ -224,37 +231,27 @@ public class LUI : IDisposable
 	public LuiContainer CreateImageFromDb(string parent, LuiPosition position, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "")
 	{
 		LuiContainer cont = CreateEmptyContainer(parent, name);
+		cont.SetAnchorAndOffset(position, offset);
 		if (imgDb.HasImage(dbName))
-		{
-			cont.SetAnchorAndOffset(position, offset);
 			cont.SetImage(imgDb.GetImageString(dbName), color);
-		}
 		else
-		{
-			Interface.Oxide.LogWarning($"[LUI] You're trying to image from ImageDatabase '{dbName}' which doesn't exist. Ignoring.");
-			return null;
-		}
+			Interface.Oxide.LogWarning($"[LUI] You're trying to load an image from ImageDatabase '{dbName}' which doesn't exist.");
 		elements.Add(cont);
 		return cont;
 	}
 
-	public LuiContainer CreateRawImageFromDb(LuiContainer container, LuiPosition position, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => CreateImageFromDb(container.name, position, offset, dbName, color, name);
-	public LuiContainer CreateRawImageFromDb(LuiContainer container, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => CreateImageFromDb(container.name, LuiPosition.None, offset, dbName, color, name);
-	public LuiContainer CreateRawImageFromDb(string parent, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => CreateImageFromDb(parent, LuiPosition.None, offset, dbName, color, name);
+	public LuiContainer CreateRawImageFromDb(LuiContainer container, LuiPosition position, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => CreateRawImageFromDb(container.name, position, offset, dbName, color, name);
+	public LuiContainer CreateRawImageFromDb(LuiContainer container, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => CreateRawImageFromDb(container.name, LuiPosition.None, offset, dbName, color, name);
+	public LuiContainer CreateRawImageFromDb(string parent, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => CreateRawImageFromDb(parent, LuiPosition.None, offset, dbName, color, name);
 
 	public LuiContainer CreateRawImageFromDb(string parent, LuiPosition position, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "")
 	{
 		LuiContainer cont = CreateEmptyContainer(parent, name);
+		cont.SetAnchorAndOffset(position, offset);
 		if (imgDb.HasImage(dbName))
-		{
-			cont.SetAnchorAndOffset(position, offset);
 			cont.SetRawImage(imgDb.GetImageString(dbName), color);
-		}
 		else
-		{
-			Interface.Oxide.LogWarning($"[LUI] You're trying to image from ImageDatabase '{dbName}' which doesn't exist. Ignoring.");
-			return null;
-		}
+			Interface.Oxide.LogWarning($"[LUI] You're trying to load an image from ImageDatabase '{dbName}' which doesn't exist.");
 		elements.Add(cont);
 		return cont;
 	}
@@ -282,8 +279,11 @@ public class LUI : IDisposable
 		ItemDefinition def = ItemManager.FindItemDefinition(shortname);
 		if (def)
 			return CreateItemIcon(parent, position, offset, def.itemid, skinId, color, name);
-		Interface.Oxide.LogWarning($"[LUI] We couldn't find '{shortname}' as valid item shortname. Ignoring.");
-		return null;
+		Interface.Oxide.LogWarning($"[LUI] We couldn't find '{shortname}' as valid item shortname.");
+		LuiContainer cont = CreateEmptyContainer(parent, name);
+		cont.SetAnchorAndOffset(position, offset);
+		elements.Add(cont);
+		return cont;
 	}
 
 	public LuiContainer CreateItemIcon(LuiContainer container, LuiPosition position, LuiOffset offset, int itemId, ulong skinId = 0, string color = "", string name = "") => CreateItemIcon(container.name, position, offset, itemId, skinId, color, name);
@@ -340,7 +340,7 @@ public class LUI : IDisposable
 		elements.Add(cont);
 		return cont;
 	}
-	
+
 	public LuiContainer CreateHorizontalLayoutGroup(LuiContainer container, LuiPosition position, LuiOffset offset, float spacing = 0, string name = "") => CreateHorizontalLayoutGroup(container.name, position, offset, spacing, name);
 	public LuiContainer CreateHorizontalLayoutGroup(LuiContainer container, LuiOffset offset, float spacing = 0, string name = "") => CreateHorizontalLayoutGroup(container.name, LuiPosition.None, offset, spacing, name);
 	public LuiContainer CreateHorizontalLayoutGroup(string parent, LuiOffset offset, float spacing = 0, string name = "") => CreateHorizontalLayoutGroup(parent, LuiPosition.None, offset, spacing, name);
@@ -447,6 +447,7 @@ public class LUI : IDisposable
 	}
 
 	#endregion
+	
 	/// <summary>
 	/// Gets the built UI in bytes. Useful when redrawing whole UI, and we want to minimalize delay between destroy and draw.
 	/// </summary>
@@ -455,25 +456,24 @@ public class LUI : IDisposable
 		LUIBuilder cbi = new LUIBuilder(this);
 		return cbi.GetMergedBytes();
 	}
-	
+
 	/// <summary>
 	/// Builds and sends UI to player.
 	/// </summary>
-	public void SendUi(BasePlayer player) => SendJson(new SendInfo(player.net.connection));
+	public void SendUi(BasePlayer player) => Send(new SendInfo(player.Connection));
 
 	/// <summary>
-	/// Builds and sends UI to player. Preffered SendUi(BasePlayer) over this method.
+	/// Builds and sends UI to player. Preferred SendUi(BasePlayer) over this method.
 	/// </summary>
-	public void SendUiJson(BasePlayer player) => SendJson(new SendInfo(player.net.connection));
-	
+	public void SendUiJson(BasePlayer player) => SendJson(new SendInfo(player.Connection));
+
 	/// <summary>
 	/// Sends already buit UI to player. Need to run GetUiBytes() in order to get the bytes before.
 	/// </summary>
 	public void SendUiBytes(BasePlayer player, byte[] bytes) => SendBytes(new SendInfo(player.Connection), bytes);
 
-
 	/// <summary>
-	/// Returns string JSON of currently builded UI.
+	/// Returns string JSON of currently built UI.
 	/// </summary>
 	public string ToJson()
 	{
@@ -488,7 +488,7 @@ public class LUI : IDisposable
 		write.PacketID(Message.Type.RPCMessage);
 		write.EntityID(CommunityEntity.ServerInstance.net.ID);
 		write.UInt32(StringPool.Get("AddUI"));
-		write.String(cbi.GetJsonString());
+		write.BytesWithSize(cbi.GetMergedBytes());
 		write.Send(send);
 	}
 
@@ -515,6 +515,13 @@ public class LUI : IDisposable
 
 	public void Dispose()
 	{
+		for (var i = 0; i < elements.Count; i++)
+		{
+			LuiContainer element = elements[i];
+			foreach (LuiCompBase component in element.luiComponents)
+				LuiPool.ReturnComp(component);
+			LuiPool.ReturnContainer(element);
+		}
 		elements.Clear();
 	}
 	
@@ -614,7 +621,7 @@ public class LUI : IDisposable
 			_ => nameof(TimerFormat.None)
 		};
 	}
-	
+
 	public static string GetCorner(GridLayoutGroup.Corner corner)
 	{
 		return corner switch
@@ -675,10 +682,11 @@ public class LUI : IDisposable
 	{
 		public string name;
 		public string parent;
-		public LuiComponentDictionary luiComponents = new();
+		public LuiComponentDictionary luiComponents;
 		public string destroyUi;
 		public float fadeOut;
 		public bool update;
+		public bool activeSelf = true;
 
 		#region Container Methods - Global
 
@@ -700,19 +708,25 @@ public class LUI : IDisposable
 			return this;
 		}
 
+		public LuiContainer SetActiveSelf(bool active)
+		{
+			activeSelf = active;
+			return this;
+		}
+
 	    /// <summary>
 	    /// Updates or creates new component in current element.
 		/// Recommended to use only when there is no built-in method for that.
 	    /// </summary>
-		public T UpdateComp<T>() where T : LuiCompBase, new()
+		public T UpdateComp<T>() where T : LuiCompBase
 		{
 			//if (!update)
 			//	Logger.Warn($"[LUI] You're trying to create update in element '{name}' (of parent '{parent}') which doesn't allow updates. Ignoring.");
-			if (luiComponents.TryGetValue<T>(GetLuiCompType(typeof(T)), out var component))
+			if (luiComponents.TryGetValue<T>(LuiPool.GetLuiCompType(typeof(T)), out var component))
 			{
 				return component;
 			}
-			component = new T();
+			component = LuiPool.GetLuiCompFromPool<T>(typeof(T));
 			luiComponents.Add(component.type, component);
 			return component;
 		}
@@ -724,7 +738,7 @@ public class LUI : IDisposable
 			//	Logger.Warn($"[LUI] You're trying to create update in element '{name}' (of parent '{parent}') which doesn't allow updates. Ignoring.");
 			//	return;
 			//}
-			if (luiComponents.TryGetValue<T>(GetLuiCompType(typeof(T)), out var component))
+			if (luiComponents.TryGetValue<T>(LuiPool.GetLuiCompType(typeof(T)), out var component))
 			{
 				component.enabled = enabled;
 			}
@@ -736,7 +750,7 @@ public class LUI : IDisposable
 
 		public void SetFadeIn<T>(float fadeIn) where T : LuiCompBase
 		{
-			if (luiComponents.TryGetValue<T>(GetLuiCompType(typeof(T)), out var component))
+			if (luiComponents.TryGetValue<T>(LuiPool.GetLuiCompType(typeof(T)), out var component))
 			{
 				component.fadeIn = fadeIn;
 			}
@@ -748,7 +762,7 @@ public class LUI : IDisposable
 
 		public void SetPlaceholderParentId<T>(string placeholderParentId) where T : LuiCompBase
 		{
-			if (luiComponents.TryGetValue<T>(GetLuiCompType(typeof(T)), out var component))
+			if (luiComponents.TryGetValue<T>(LuiPool.GetLuiCompType(typeof(T)), out var component))
 			{
 				component.placeholderParentId = placeholderParentId;
 			}
@@ -756,32 +770,6 @@ public class LUI : IDisposable
 			{
 				Interface.Oxide.LogWarning($"[LUI] You're trying to switch placeholderParentId of component '{typeof(T)}' but it isn't present. Ignoring.");
 			}
-		}
-
-		public static LuiCompType GetLuiCompType(Type type)
-		{
-			return type switch
-			{
-				not null when type == typeof(LuiTextComp) => LuiCompType.Text,
-				not null when type == typeof(LuiImageComp) => LuiCompType.Image,
-				not null when type == typeof(LuiRawImageComp) => LuiCompType.RawImage,
-				not null when type == typeof(LuiButtonComp) => LuiCompType.Button,
-				not null when type == typeof(LuiOutlineComp) => LuiCompType.Outline,
-				not null when type == typeof(LuiInputComp) => LuiCompType.InputField,
-				not null when type == typeof(LuiCursorComp) => LuiCompType.NeedsCursor,
-				not null when type == typeof(LuiRectTransformComp) => LuiCompType.RectTransform,
-				not null when type == typeof(LuiCountdownComp) => LuiCompType.Countdown,
-				not null when type == typeof(LuiHorizontalLayoutGroupComp) => LuiCompType.HorizontalLayoutGroup,
-				not null when type == typeof(LuiVerticalLayoutGroupComp) => LuiCompType.VerticalLayoutGroup,
-				not null when type == typeof(LuiGridLayoutGroupComp) => LuiCompType.GridLayoutGroup,
-				not null when type == typeof(LuiContentSizeFitterComp) => LuiCompType.ContentSizeFitter,
-				not null when type == typeof(LuiLayoutElementComp) => LuiCompType.LayoutElement,
-				not null when type == typeof(LuiDraggableComp) => LuiCompType.Draggable,
-				not null when type == typeof(LuiSlotComp) => LuiCompType.Slot,
-				not null when type == typeof(LuiKeyboardComp) => LuiCompType.NeedsKeyboard,
-				not null when type == typeof(LuiScrollComp) => LuiCompType.ScrollView,
-				_ => LuiCompType.Image
-			};
 		}
 
 		#endregion
@@ -802,7 +790,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				text = new();
+				text = LuiPool.GetText();
 				text.text = input;
 				if (fontSize > 0)
 					text.fontSize = fontSize;
@@ -823,7 +811,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				text = new();
+				text = LuiPool.GetText();
 				text.color = color;
 				luiComponents.Add(text.type, text);
 			}
@@ -838,7 +826,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				text = new();
+				text = LuiPool.GetText();
 				text.font = GetFont(font);
 				luiComponents.Add(text.type, text);
 			}
@@ -853,7 +841,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				text = new();
+				text = LuiPool.GetText();
 				text.align = GetAlign(align);
 				luiComponents.Add(text.type, text);
 			}
@@ -868,7 +856,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				text = new();
+				text = LuiPool.GetText();
 				text.verticalOverflow = GetWrapMode(verticalOverflow);
 				luiComponents.Add(text.type, text);
 			}
@@ -887,7 +875,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				img = new();
+				img = LuiPool.GetImage();
 				img.color = color;
 				luiComponents.Add(img.type, img);
 			}
@@ -902,7 +890,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				img = new();
+				img = LuiPool.GetImage();
 				img.material = material;
 				luiComponents.Add(img.type, img);
 			}
@@ -917,7 +905,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				img = new();
+				img = LuiPool.GetImage();
 				img.imageType = GetImageType(imageType);
 				luiComponents.Add(img.type, img);
 			}
@@ -938,7 +926,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				img = new();
+				img = LuiPool.GetImage();
 				if (sprite != null)
 				{
 					img.sprite = sprite;
@@ -962,7 +950,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				img = new();
+				img = LuiPool.GetImage();
 				if (png != null)
 					img.png = png;
 				if (color != null)
@@ -980,7 +968,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				img = new();
+				img = LuiPool.GetImage();
 				img.fillCenter = fill;
 				luiComponents.Add(img.type, img);
 			}
@@ -995,7 +983,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				img = new();
+				img = LuiPool.GetImage();
 				img.slice = sliceValue;
 				luiComponents.Add(img.type, img);
 			}
@@ -1011,7 +999,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				img = new();
+				img = LuiPool.GetImage();
 				img.itemid = itemid;
 				img.skinid = skinid;
 				luiComponents.Add(img.type, img);
@@ -1034,7 +1022,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				img = new();
+				img = LuiPool.GetRawImage();
 				if (url != null)
 					img.url = url;
 				if (color != null)
@@ -1055,7 +1043,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				img = new();
+				img = LuiPool.GetRawImage();
 				if (png != null)
 					img.png = png;
 				if (color != null)
@@ -1075,7 +1063,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				img = new();
+				img = LuiPool.GetRawImage();
 				img.steamid = steamid;
 				if (color != null)
 					img.color = color;
@@ -1094,7 +1082,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				img = new();
+				img = LuiPool.GetRawImage();
 				img.sprite = sprite;
 				if (color != null)
 					img.color = color;
@@ -1113,7 +1101,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				img = new();
+				img = LuiPool.GetRawImage();
 				img.material = material;
 				if (color != null)
 					img.color = color;
@@ -1137,7 +1125,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				button = new();
+				button = LuiPool.GetButton();
 				if (command != null)
 					button.command = command;
 				if (color != null)
@@ -1170,7 +1158,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				button = new();
+				button = LuiPool.GetButton();
 				if (color != null)
 					button.color = color;
 				if (normalColor != null)
@@ -1200,7 +1188,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				button = new();
+				button = LuiPool.GetButton();
 				button.material = material;
 				luiComponents.Add(button.type, button);
 			}
@@ -1216,7 +1204,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				button = new();
+				button = LuiPool.GetButton();
 				button.sprite = sprite;
 				button.imageType = GetImageType(imageType);
 				luiComponents.Add(button.type, button);
@@ -1232,7 +1220,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				button = new();
+				button = LuiPool.GetButton();
 				button.close = close;
 				luiComponents.Add(button.type, button);
 			}
@@ -1253,7 +1241,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				outline = new();
+				outline = LuiPool.GetOutline();
 				outline.color = color;
 				outline.distance = distance;
 				outline.useGraphicAlpha = useGraphicAlpha;
@@ -1288,7 +1276,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				input = new();
+				input = LuiPool.GetInput();
 				if (color != null)
 					input.color = color;
 				if (text != null)
@@ -1317,7 +1305,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				input = new();
+				input = LuiPool.GetInput();
 				input.readOnly = readOnly;
 				luiComponents.Add(input.type, input);
 			}
@@ -1332,7 +1320,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				input = new();
+				input = LuiPool.GetInput();
 				input.password = password;
 				luiComponents.Add(input.type, input);
 			}
@@ -1347,7 +1335,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				input = new();
+				input = LuiPool.GetInput();
 				input.autofocus = autofocus;
 				luiComponents.Add(input.type, input);
 			}
@@ -1363,7 +1351,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				input = new();
+				input = LuiPool.GetInput();
 				input.needsKeyboard = needsKeyboard;
 				input.hudMenuInput = hudMenuInput;
 				luiComponents.Add(input.type, input);
@@ -1371,7 +1359,7 @@ public class LUI : IDisposable
 			return this;
 		}
 
-		public LuiContainer SetInputLineType(UnityEngine.UI.InputField.LineType lineType)
+		public LuiContainer SetInputLineType(InputField.LineType lineType)
 		{
 			if (luiComponents.TryGetValue<LuiInputComp>(LuiCompType.InputField, out var input))
 			{
@@ -1379,7 +1367,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				input = new();
+				input = LuiPool.GetInput();
 				input.lineType = GetLineType(lineType);
 				luiComponents.Add(input.type, input);
 			}
@@ -1394,7 +1382,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				input = new();
+				input = LuiPool.GetInput();
 				input.placeholderId = placeholderId;
 				luiComponents.Add(input.type, input);
 			}
@@ -1409,7 +1397,7 @@ public class LUI : IDisposable
 		{
 			if (!luiComponents.TryGetValue<LuiCursorComp>(LuiCompType.Button, out var cursor))
 			{
-				cursor = new();
+				cursor = LuiPool.GetCursor();
 				luiComponents.Add(cursor.type, cursor);
 			}
 			return this;
@@ -1427,7 +1415,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				rect = new();
+				rect = LuiPool.GetRect();
 				rect.anchor = pos;
 				luiComponents.Add(rect.type, rect);
 			}
@@ -1442,7 +1430,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				rect = new();
+				rect = LuiPool.GetRect();
 				rect.offset = off;
 				luiComponents.Add(rect.type, rect);
 			}
@@ -1457,7 +1445,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				rect = new();
+				rect = LuiPool.GetRect();
 				rect.rotation = rotation;
 				luiComponents.Add(rect.type, rect);
 			}
@@ -1473,7 +1461,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				rect = new();
+				rect = LuiPool.GetRect();
 				rect.anchor = pos;
 				rect.offset = off;
 				luiComponents.Add(rect.type, rect);
@@ -1489,7 +1477,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				rect = new();
+				rect = LuiPool.GetRect();
 				rect.setParent = setParent;
 				luiComponents.Add(rect.type, rect);
 			}
@@ -1504,7 +1492,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				rect = new();
+				rect = LuiPool.GetRect();
 				rect.setTransformIndex = setTransformIndex;
 				luiComponents.Add(rect.type, rect);
 			}
@@ -1532,7 +1520,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				countdown = new();
+				countdown = LuiPool.GetCountdown();
 				countdown.startTime = startTime;
 				countdown.endTime = endTime;
 				if (step != 1)
@@ -1556,7 +1544,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				countdown = new();
+				countdown = LuiPool.GetCountdown();
 				countdown.destroyIfDone = destroy;
 				luiComponents.Add(countdown.type, countdown);
 			}
@@ -1571,7 +1559,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				countdown = new();
+				countdown = LuiPool.GetCountdown();
 				countdown.timerFormat = GetTimerFormat(format);
 				luiComponents.Add(countdown.type, countdown);
 			}
@@ -1590,7 +1578,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetHorizontalLayoutGroup();
 				layoutGroup.spacing = spacing;
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
@@ -1605,7 +1593,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetHorizontalLayoutGroup();
 				layoutGroup.childAlignment = GetAlign(anchor);
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
@@ -1621,7 +1609,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetHorizontalLayoutGroup();
 				layoutGroup.childForceExpandWidth = width;
 				layoutGroup.childForceExpandHeight = height;
 				luiComponents.Add(layoutGroup.type, layoutGroup);
@@ -1638,7 +1626,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetHorizontalLayoutGroup();
 				layoutGroup.childControlWidth = width;
 				layoutGroup.childControlHeight = height;
 				luiComponents.Add(layoutGroup.type, layoutGroup);
@@ -1655,7 +1643,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetHorizontalLayoutGroup();
 				layoutGroup.childScaleWidth = width;
 				layoutGroup.childScaleHeight = height;
 				luiComponents.Add(layoutGroup.type, layoutGroup);
@@ -1671,7 +1659,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetHorizontalLayoutGroup();
 				layoutGroup.padding = padding;
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
@@ -1691,7 +1679,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetVerticalLayoutGroup();
 				layoutGroup.spacing = spacing;
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
@@ -1706,7 +1694,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetVerticalLayoutGroup();
 				layoutGroup.childAlignment = GetAlign(anchor);
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
@@ -1722,7 +1710,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetVerticalLayoutGroup();
 				layoutGroup.childForceExpandWidth = width;
 				layoutGroup.childForceExpandHeight = height;
 				luiComponents.Add(layoutGroup.type, layoutGroup);
@@ -1739,7 +1727,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetVerticalLayoutGroup();
 				layoutGroup.childControlWidth = width;
 				layoutGroup.childControlHeight = height;
 				luiComponents.Add(layoutGroup.type, layoutGroup);
@@ -1756,7 +1744,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetVerticalLayoutGroup();
 				layoutGroup.childScaleWidth = width;
 				layoutGroup.childScaleHeight = height;
 				luiComponents.Add(layoutGroup.type, layoutGroup);
@@ -1772,7 +1760,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetVerticalLayoutGroup();
 				layoutGroup.padding = padding;
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
@@ -1791,7 +1779,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetGridLayoutGroup();
 				layoutGroup.cellSize = size;
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
@@ -1806,7 +1794,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetGridLayoutGroup();
 				layoutGroup.spacing = spacing;
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
@@ -1821,7 +1809,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetGridLayoutGroup();
 				layoutGroup.startCorner = GetCorner(corner);
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
@@ -1836,7 +1824,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetGridLayoutGroup();
 				layoutGroup.startAxis = GetAxis(axis);
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
@@ -1851,7 +1839,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetGridLayoutGroup();
 				layoutGroup.childAlignment = GetAlign(align);
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
@@ -1866,7 +1854,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetGridLayoutGroup();
 				layoutGroup.constraint = GetConstraint(constraint);
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
@@ -1881,7 +1869,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetGridLayoutGroup();
 				layoutGroup.constraintCount = count;
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
@@ -1896,7 +1884,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutGroup = new();
+				layoutGroup = LuiPool.GetGridLayoutGroup();
 				layoutGroup.padding = padding;
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
@@ -1916,7 +1904,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				fitterComp = new();
+				fitterComp = LuiPool.GetContentSizeFitter();
 				fitterComp.horizontalFit = GetFitMode(horizontalFit);
 				fitterComp.verticalFit = GetFitMode(verticalFit);
 				luiComponents.Add(fitterComp.type, fitterComp);
@@ -1939,7 +1927,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutComp = new();
+				layoutComp = LuiPool.GetLayoutElement();
 				if (width != -1f)
 					layoutComp.preferredWidth = width;
 				if (height != -1f)
@@ -1960,7 +1948,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutComp = new();
+				layoutComp = LuiPool.GetLayoutElement();
 				if (width != -1f)
 					layoutComp.minWidth = width;
 				if (height != -1f)
@@ -1981,7 +1969,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutComp = new();
+				layoutComp = LuiPool.GetLayoutElement();
 				if (width != -1f)
 					layoutComp.flexibleWidth = width;
 				if (height != -1f)
@@ -1999,7 +1987,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				layoutComp = new();
+				layoutComp = LuiPool.GetLayoutElement();
 				layoutComp.ignoreLayout = ignore;
 				luiComponents.Add(layoutComp.type, layoutComp);
 			}
@@ -2025,7 +2013,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				drag = new();
+				drag = LuiPool.GetDraggable();
 				if (filter != null)
 					drag.filter = filter;
 				if (drag.maxDistance != -1)
@@ -2047,7 +2035,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				drag = new();
+				drag = LuiPool.GetDraggable();
 				drag.dragAlpha = alpha;
 				luiComponents.Add(drag.type, drag);
 			}
@@ -2062,7 +2050,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				drag = new();
+				drag = LuiPool.GetDraggable();
 				drag.parentLimitIndex = index;
 				luiComponents.Add(drag.type, drag);
 			}
@@ -2077,7 +2065,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				drag = new();
+				drag = LuiPool.GetDraggable();
 				drag.parentPadding = padding;
 				luiComponents.Add(drag.type, drag);
 			}
@@ -2092,7 +2080,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				drag = new();
+				drag = LuiPool.GetDraggable();
 				drag.anchorOffset = offset;
 				luiComponents.Add(drag.type, drag);
 			}
@@ -2107,7 +2095,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				drag = new();
+				drag = LuiPool.GetDraggable();
 				drag.positionRPC = GetSendType(posSendType);
 				luiComponents.Add(drag.type, drag);
 			}
@@ -2127,7 +2115,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				slot = new();
+				slot = LuiPool.GetSlot();
 				if (filter != null)
 					slot.filter = filter;
 				luiComponents.Add(slot.type, slot);
@@ -2143,7 +2131,7 @@ public class LUI : IDisposable
 		{
 			if (!luiComponents.TryGetValue<LuiKeyboardComp>(LuiCompType.Button, out var keyboard))
 			{
-				keyboard = new();
+				keyboard = LuiPool.GetKeyboard();
 				luiComponents.Add(keyboard.type, keyboard);
 			}
 			return this;
@@ -2175,7 +2163,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				scroll = new();
+				scroll = LuiPool.GetScroll();
 				if (!update)
 				{
 					scroll.vertical = vertical;
@@ -2205,7 +2193,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				scroll = new();
+				scroll = LuiPool.GetScroll();
 				scroll.anchor = pos;
 				scroll.offset = offset;
 				luiComponents.Add(scroll.type, scroll);
@@ -2221,7 +2209,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				scroll = new();
+				scroll = LuiPool.GetScroll();
 				scroll.pivot = pivot;
 				luiComponents.Add(scroll.type, scroll);
 			}
@@ -2239,7 +2227,7 @@ public class LUI : IDisposable
 			}
 			else
 			{
-				scroll = new();
+				scroll = LuiPool.GetScroll();
 				if (horizontal != 0)
 					scroll.horizontalNormalizedPosition = horizontal;
 				if (vertical != 0)
@@ -2293,6 +2281,7 @@ public class LuiComponentDictionary : IEnumerable
 		_count = 0;
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public bool TryGetValue<T>(LuiCompType key, out T value) where T : LuiCompBase
 	{
 		for (int i = 0; i < _count; i++)
@@ -2628,7 +2617,7 @@ public class LuiVerticalLayoutGroupComp : LuiCompBase
 
 public class LuiGridLayoutGroupComp : LuiCompBase
 {
-	public Vector2 cellSize = new Vector2(100, 100);
+	public Vector2 cellSize = LUI.defaultCellSize;
 	public Vector2 spacing;
 	public string startCorner;
 	public string startAxis;
@@ -2714,7 +2703,7 @@ public class LuiScrollComp : LuiCompBase
 {
 	public LuiPosition anchor = LuiPosition.Full;
 	public LuiOffset offset = LuiOffset.None;
-	public Vector2 pivot = new Vector2(0.5f, 0.5f);
+	public Vector2 pivot = LUI.defaultPivot;
 	public bool horizontal;
 	public bool vertical;
 	public string movementType;
@@ -2746,4 +2735,470 @@ public struct LuiScrollbar
 	public string pressedColor;
 	public string trackSprite;
 	public string trackColor;
+}
+
+//Uncomment when draggables will be out and there won't be anything like that in CUI.
+/*public enum DraggablePositionSendType
+{
+	NormalizedScreen = 0,
+	NormalizedParent = 1,
+	Relative = 2,
+	RelativeAnchor = 3,
+}*/
+
+//Currently it relies on Oxide CUI enum, uncomment if it shouldn't.
+/*public enum TimerFormat
+{
+	None,
+	SecondsHundreth,
+	MinutesSeconds,
+	MinutesSecondsHundreth,
+	HoursMinutes,
+	HoursMinutesSeconds,
+	HoursMinutesSecondsMilliseconds,
+	HoursMinutesSecondsTenths,
+	DaysHoursMinutes,
+	DaysHoursMinutesSeconds,
+	Custom
+}*/
+
+public static class LuiPool
+{
+	private static readonly Stack<LUI.LuiContainer> _containers = new();
+	private static readonly Stack<LuiCompBase> _texts  = new();
+	private static readonly Stack<LuiCompBase> _images  = new();
+	private static readonly Stack<LuiCompBase> _rawImages  = new();
+	private static readonly Stack<LuiCompBase> _buttons  = new();
+	private static readonly Stack<LuiCompBase> _outlines = new();
+	private static readonly Stack<LuiCompBase> _inputs  = new();
+	private static readonly Stack<LuiCompBase> _cursors  = new();
+	private static readonly Stack<LuiCompBase> _rects = new();
+	private static readonly Stack<LuiCompBase> _countdowns = new();
+	private static readonly Stack<LuiCompBase> _horizontals = new();
+	private static readonly Stack<LuiCompBase> _verticals = new();
+	private static readonly Stack<LuiCompBase> _grids = new();
+	private static readonly Stack<LuiCompBase> _fitters = new();
+	private static readonly Stack<LuiCompBase> _layouts = new();
+	private static readonly Stack<LuiCompBase> _draggables = new();
+	private static readonly Stack<LuiCompBase> _slots = new();
+	private static readonly Stack<LuiCompBase> _keyboards = new();
+	private static readonly Stack<LuiCompBase> _scrolls = new();
+
+	public static int poolElements => _containers.Count + _texts.Count + _images.Count + _rawImages.Count + _buttons.Count + _outlines.Count + _inputs.Count + _cursors.Count + _rects.Count + _countdowns.Count + _draggables.Count + _slots.Count + _keyboards.Count + _scrolls.Count;
+
+	public static void ReturnComp<T>(T component) where T : LuiCompBase
+	{
+		if (component == null) return;
+
+		switch (component.type)
+		{
+			case LuiCompType.Text: _texts.Push(component); break;
+			case LuiCompType.Image: _images.Push(component); break;
+			case LuiCompType.RawImage: _rawImages.Push(component); break;
+			case LuiCompType.Button: _buttons.Push(component); break;
+			case LuiCompType.Outline: _outlines.Push(component); break;
+			case LuiCompType.InputField: _inputs.Push(component); break;
+			case LuiCompType.NeedsCursor: _cursors.Push(component); break;
+			case LuiCompType.RectTransform: _rects.Push(component); break;
+			case LuiCompType.Countdown: _countdowns.Push(component); break;
+			case LuiCompType.Draggable: _draggables.Push(component); break;
+			case LuiCompType.Slot: _slots.Push(component); break;
+			case LuiCompType.NeedsKeyboard: _keyboards.Push(component); break;
+			case LuiCompType.ScrollView: _scrolls.Push(component); break;
+		}
+	}
+
+	public static LuiTextComp GetText()
+	{
+		if (_texts.Count == 0)
+			return new();
+
+		LuiTextComp comp = _texts.Pop() as LuiTextComp;
+		comp.enabled = true;
+		comp.text = null;
+		comp.fontSize = 0;
+		comp.font = null;
+		comp.align = null;
+		comp.color = null;
+		comp.verticalOverflow = null;
+		comp.fadeIn = 0;
+		comp.placeholderParentId = null;
+		return comp;
+	}
+
+	public static LuiImageComp GetImage()
+	{
+		if (_images.Count == 0)
+			return new();
+
+		LuiImageComp comp = _images.Pop() as LuiImageComp;
+		comp.enabled = true;
+		comp.sprite = null;
+		comp.material = null;
+		comp.color = null;
+		comp.imageType = null;
+		comp.fillCenter = false;
+		comp.slice = null;
+		comp.png = null;
+		comp.itemid = 0;
+		comp.skinid = 0;
+		comp.fadeIn = 0;
+		comp.placeholderParentId = null;
+		return comp;
+	}
+
+	public static LuiRawImageComp GetRawImage()
+	{
+		if (_rawImages.Count == 0)
+			return new();
+
+		LuiRawImageComp comp = _rawImages.Pop() as LuiRawImageComp;
+		comp.enabled = true;
+		comp.sprite = null;
+		comp.color = null;
+		comp.material = null;
+		comp.url = null;
+		comp.png = null;
+		comp.steamid = null;
+		comp.fadeIn = 0;
+		comp.placeholderParentId = null;
+		return comp;
+	}
+
+	public static LuiButtonComp GetButton()
+	{
+		if (_buttons.Count == 0)
+			return new();
+
+		LuiButtonComp comp = _buttons.Pop() as LuiButtonComp;
+		comp.enabled = true;
+		comp.command = null;
+		comp.close = null;
+		comp.sprite = null;
+		comp.material = null;
+		comp.color = null;
+		comp.imageType = null;
+		comp.normalColor = null;
+		comp.highlightedColor = null;
+		comp.pressedColor = null;
+		comp.selectedColor = null;
+		comp.disabledColor = null;
+		comp.colorMultiplier = -1;
+		comp.fadeDuration = -1;
+		comp.fadeIn = 0;
+		comp.placeholderParentId = null;
+		return comp;
+	}
+
+	public static LuiOutlineComp GetOutline()
+	{
+		if (_outlines.Count == 0)
+			return new();
+
+		LuiOutlineComp comp = _outlines.Pop() as LuiOutlineComp;
+		comp.enabled = true;
+		comp.color = null;
+		comp.distance = default;
+		comp.useGraphicAlpha = false;
+
+		return comp;
+	}
+
+	public static LuiInputComp GetInput()
+	{
+		if (_inputs.Count == 0)
+			return new();
+
+		LuiInputComp comp = _inputs.Pop() as LuiInputComp;
+		comp.enabled = true;
+		comp.fontSize = 0;
+		comp.font = null;
+		comp.align = null;
+		comp.color = null;
+		comp.characterLimit = 0;
+		comp.command = null;
+		comp.text= null;
+		comp.readOnly = false;
+		comp.placeholderId = null;
+		comp.lineType = null;
+		comp.password = false;
+		comp.needsKeyboard = false;
+		comp.hudMenuInput = false;
+		comp.autofocus = false;
+		comp.fadeIn = 0;
+		comp.placeholderParentId = null;
+		return comp;
+	}
+
+	public static LuiCursorComp GetCursor()
+	{
+		if (_cursors.Count == 0)
+			return new();
+
+		LuiCursorComp comp = _cursors.Pop() as LuiCursorComp;
+		comp.enabled = true;
+
+		return comp;
+	}
+
+	public static LuiRectTransformComp GetRect()
+	{
+		if (_rects.Count == 0)
+			return new();
+
+		LuiRectTransformComp comp = _rects.Pop() as LuiRectTransformComp;
+		comp.anchor = LuiPosition.Full;
+		comp.offset = LuiOffset.None;
+		comp.rotation = 0;
+		comp.setParent = null;
+		comp.setTransformIndex = -1;
+		return comp;
+	}
+
+	public static LuiCountdownComp GetCountdown()
+	{
+		if (_countdowns.Count == 0)
+			return new();
+
+		LuiCountdownComp comp = _countdowns.Pop() as LuiCountdownComp;
+		comp.enabled = true;
+		comp.endTime = -1;
+		comp.startTime = -1;
+		comp.step = 0;
+		comp.interval = 0;
+		comp.timerFormat = null;
+		comp.numberFormat = null;
+		comp.destroyIfDone = true;
+		comp.command = null;
+		return comp;
+	}
+
+	public static LuiHorizontalLayoutGroupComp GetHorizontalLayoutGroup()
+	{
+		if (_horizontals.Count == 0)
+			return new();
+
+		LuiHorizontalLayoutGroupComp comp = _horizontals.Pop() as LuiHorizontalLayoutGroupComp;
+		comp.spacing = 0;
+		comp.childAlignment = null;
+		comp.childForceExpandWidth = true;
+		comp.childForceExpandWidth = true;
+		comp.childControlWidth = false;
+		comp.childControlHeight = false;
+		comp.childScaleWidth = false;
+		comp.childScaleHeight = false;
+		comp.padding = null;
+		return comp;
+	}
+
+	public static LuiVerticalLayoutGroupComp GetVerticalLayoutGroup()
+	{
+		if (_verticals.Count == 0)
+			return new();
+
+		LuiVerticalLayoutGroupComp comp = _verticals.Pop() as LuiVerticalLayoutGroupComp;
+		comp.spacing = 0;
+		comp.childAlignment = null;
+		comp.childForceExpandWidth = true;
+		comp.childForceExpandWidth = true;
+		comp.childControlWidth = false;
+		comp.childControlHeight = false;
+		comp.childScaleWidth = false;
+		comp.childScaleHeight = false;
+		comp.padding = null;
+		return comp;
+	}
+
+	public static LuiGridLayoutGroupComp GetGridLayoutGroup()
+	{
+		if (_grids.Count == 0)
+			return new();
+
+		LuiGridLayoutGroupComp comp = _grids.Pop() as LuiGridLayoutGroupComp;
+		comp.cellSize = LUI.defaultCellSize;
+		comp.spacing = default;
+		comp.startCorner = null;
+		comp.startAxis = null;
+		comp.childAlignment = null;
+		comp.constraint = null;
+		comp.constraintCount = 0;
+		comp.padding = null;
+		return comp;
+	}
+
+	public static LuiContentSizeFitterComp GetContentSizeFitter()
+	{
+		if (_fitters.Count == 0)
+			return new();
+
+		LuiContentSizeFitterComp comp = _fitters.Pop() as LuiContentSizeFitterComp;
+		comp.horizontalFit = null;
+		comp.verticalFit = null;
+		return comp;
+	}
+
+	public static LuiLayoutElementComp GetLayoutElement()
+	{
+		if (_layouts.Count == 0)
+			return new();
+
+		LuiLayoutElementComp comp = _layouts.Pop() as LuiLayoutElementComp;
+		comp.preferredWidth = -1f;
+		comp.preferredHeight = -1f;
+		comp.minWidth = 0;
+		comp.minHeight = 0;
+		comp.flexibleWidth = 0;
+		comp.flexibleHeight = 0;
+		comp.ignoreLayout = false;
+		return comp;
+	}
+
+	public static LuiDraggableComp GetDraggable()
+	{
+		if (_draggables.Count == 0)
+			return new();
+
+		LuiDraggableComp comp = _draggables.Pop() as LuiDraggableComp;
+		comp.enabled = true;
+		comp.limitToParent = false;
+		comp.maxDistance = 0;
+		comp.allowSwapping = false;
+		comp.dropAnywhere = true;
+		comp.dragAlpha = -1;
+		comp.parentLimitIndex = -1;
+		comp.filter = null;
+		comp.parentPadding = default;
+		comp.anchorOffset = default;
+		comp.keepOnTop = false;
+		comp.positionRPC = null;
+		comp.moveToAnchor = false;
+		comp.rebuildAnchor = false;
+		return comp;
+	}
+
+	public static LuiSlotComp GetSlot()
+	{
+		if (_slots.Count == 0)
+			return new();
+
+		LuiSlotComp comp = _slots.Pop() as LuiSlotComp;
+		comp.enabled = true;
+		comp.filter = null;
+		return comp;
+	}
+
+	public static LuiKeyboardComp GetKeyboard()
+	{
+		if (_keyboards.Count == 0)
+			return new();
+
+		LuiKeyboardComp comp = _keyboards.Pop() as LuiKeyboardComp;
+		comp.enabled = true;
+		return comp;
+	}
+
+	public static LuiScrollComp GetScroll()
+	{
+		if (_scrolls.Count == 0)
+			return new();
+
+		LuiScrollComp comp = _scrolls.Pop() as LuiScrollComp;
+		comp.enabled = true;
+		comp.anchor = LuiPosition.Full;
+		comp.offset = LuiOffset.None;
+		comp.pivot = LUI.defaultPivot;
+		comp.horizontal = false;
+		comp.vertical = false;
+		comp.movementType = null;
+		comp.elasticity = -1;
+		comp.inertia = false;
+		comp.decelerationRate = -1;
+		comp.scrollSensitivity = -1;
+		comp.horizontalScrollbar = default;
+		comp.verticalScrollbar = default;
+		comp.horizontalNormalizedPosition = 0;
+		comp.verticalNormalizedPosition = 0;
+		return comp;
+	}
+
+	public static LuiCompType GetLuiCompType(Type type)
+	{
+		return type switch
+		{
+			not null when type == typeof(LuiTextComp) => LuiCompType.Text,
+			not null when type == typeof(LuiImageComp) => LuiCompType.Image,
+			not null when type == typeof(LuiRawImageComp) => LuiCompType.RawImage,
+			not null when type == typeof(LuiButtonComp) => LuiCompType.Button,
+			not null when type == typeof(LuiOutlineComp) => LuiCompType.Outline,
+			not null when type == typeof(LuiInputComp) => LuiCompType.InputField,
+			not null when type == typeof(LuiCursorComp) => LuiCompType.NeedsCursor,
+			not null when type == typeof(LuiRectTransformComp) => LuiCompType.RectTransform,
+			not null when type == typeof(LuiCountdownComp) => LuiCompType.Countdown,
+			not null when type == typeof(LuiHorizontalLayoutGroupComp) => LuiCompType.HorizontalLayoutGroup,
+			not null when type == typeof(LuiVerticalLayoutGroupComp) => LuiCompType.VerticalLayoutGroup,
+			not null when type == typeof(LuiGridLayoutGroupComp) => LuiCompType.GridLayoutGroup,
+			not null when type == typeof(LuiContentSizeFitterComp) => LuiCompType.ContentSizeFitter,
+			not null when type == typeof(LuiLayoutElementComp) => LuiCompType.LayoutElement,
+			not null when type == typeof(LuiDraggableComp) => LuiCompType.Draggable,
+			not null when type == typeof(LuiSlotComp) => LuiCompType.Slot,
+			not null when type == typeof(LuiKeyboardComp) => LuiCompType.NeedsKeyboard,
+			not null when type == typeof(LuiScrollComp) => LuiCompType.ScrollView,
+			_ => LuiCompType.Image
+		};
+	}
+
+	public static T GetLuiCompFromPool<T>(Type type) where T : LuiCompBase
+	{
+		return type switch
+		{
+			not null when type == typeof(LuiTextComp) => LuiPool.GetText() as T,
+			not null when type == typeof(LuiImageComp) => LuiPool.GetImage() as T,
+			not null when type == typeof(LuiRawImageComp) => LuiPool.GetRawImage() as T,
+			not null when type == typeof(LuiButtonComp) => LuiPool.GetButton() as T,
+			not null when type == typeof(LuiOutlineComp) => LuiPool.GetOutline() as T,
+			not null when type == typeof(LuiInputComp) => LuiPool.GetInput() as T,
+			not null when type == typeof(LuiCursorComp) => LuiPool.GetCursor() as T,
+			not null when type == typeof(LuiRectTransformComp) => LuiPool.GetRect() as T,
+			not null when type == typeof(LuiCountdownComp) => LuiPool.GetCountdown() as T,
+			not null when type == typeof(LuiHorizontalLayoutGroupComp) => LuiPool.GetHorizontalLayoutGroup() as T,
+			not null when type == typeof(LuiVerticalLayoutGroupComp) => LuiPool.GetVerticalLayoutGroup() as T,
+			not null when type == typeof(LuiGridLayoutGroupComp) => LuiPool.GetGridLayoutGroup() as T,
+			not null when type == typeof(LuiContentSizeFitterComp) => LuiPool.GetContentSizeFitter() as T,
+			not null when type == typeof(LuiLayoutElementComp) => LuiPool.GetLayoutElement() as T,
+			not null when type == typeof(LuiDraggableComp) => LuiPool.GetDraggable() as T,
+			not null when type == typeof(LuiSlotComp) => LuiPool.GetSlot() as T,
+			not null when type == typeof(LuiKeyboardComp) => LuiPool.GetKeyboard() as T,
+			not null when type == typeof(LuiScrollComp) => LuiPool.GetScroll() as T,
+			_ => LuiPool.GetImage() as T,
+		};
+	}
+
+	public static LUI.LuiContainer GetContainer()
+	{
+		if (_containers.Count == 0)
+		{
+			LUI.LuiContainer cont = new LUI.LuiContainer();
+			cont.name = null;
+			cont.parent = null;
+			cont.luiComponents = new();
+			cont.destroyUi = null;
+			cont.fadeOut = 0;
+			cont.update = false;
+			cont.activeSelf = true;
+			return cont;
+		}
+		else
+		{
+			LUI.LuiContainer cont = _containers.Pop();
+			cont.name = null;
+			cont.parent = null;
+			cont.luiComponents.Clear();
+			cont.destroyUi = null;
+			cont.fadeOut = 0;
+			cont.update = false;
+			return cont;
+		}
+	}
+
+	public static void ReturnContainer(LUI.LuiContainer container) => _containers.Push(container);
 }
