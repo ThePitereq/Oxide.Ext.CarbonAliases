@@ -834,9 +834,14 @@ namespace Oxide.Ext.CarbonAliases
 
             #endregion
 
+            #region Pooled Elements
+
+            public CuiElementContainer TakeFromPoolContainer() => new();
+
+            #endregion
 
             #region Classes
-            
+
             public enum FontTypes
             {
                 RobotoCondensedBold,
