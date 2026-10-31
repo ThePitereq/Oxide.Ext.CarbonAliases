@@ -12,10 +12,10 @@ namespace Oxide.Ext.CarbonAliases;
 
 public class LUI : IDisposable
 {
-	//Code from Carbon made by ThePitereq
-	//Source: https://github.com/CarbonCommunity/Carbon.Common/blob/develop/src/Carbon/Components/LUI.cs
-	
-	public readonly List<LuiContainer> elements = new();
+    //Code from Carbon made by ThePitereq
+    //Source: https://github.com/CarbonCommunity/Carbon/blob/main/src/Carbon.Components/Carbon.Common/src/Carbon/Components/LUI.cs
+
+    public readonly List<LuiContainer> elements = new();
 
 	private readonly CUI _parent;
 
@@ -39,6 +39,7 @@ public class LUI : IDisposable
 	public string lastName = string.Empty;
 
 	public static readonly Vector2 defaultPivot = new(0.5f, 0.5f);
+	public static readonly Vector2 defaultFade = new(0f, 1f);
 	public static readonly Vector2 defaultCellSize = new(100, 100);
 
 	#region Core Panel
@@ -301,7 +302,20 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-	public LuiContainer CreateButton(LuiContainer container, LuiPosition position, LuiOffset offset, string command, string color, bool isProtected = true, string name = "") => CreateButton(container.name, position, offset, command, color, isProtected, name);
+    public LuiContainer CreateSteamAvatar(LuiContainer container, LuiPosition position, LuiOffset offset, string steamId, string color = null, string name = "") => CreateSteamAvatar(container.name, position, offset, steamId, color, name);
+    public LuiContainer CreateSteamAvatar(LuiContainer container, LuiOffset offset, string steamId, string color = null, string name = "") => CreateSteamAvatar(container.name, LuiPosition.None, offset, steamId, color, name);
+    public LuiContainer CreateSteamAvatar(string parent, LuiOffset offset, string steamId, string color = null, string name = "") => CreateSteamAvatar(parent, LuiPosition.None, offset, steamId, color, name);
+
+    public LuiContainer CreateSteamAvatar(string parent, LuiPosition position, LuiOffset offset, string steamId, string color = null, string name = "")
+    {
+        LuiContainer cont = CreateEmptyContainer(parent, name);
+        cont.SetAnchorAndOffset(position, offset);
+        cont.SetSteamIcon(steamId, color);
+        elements.Add(cont);
+        return cont;
+    }
+
+    public LuiContainer CreateButton(LuiContainer container, LuiPosition position, LuiOffset offset, string command, string color, bool isProtected = true, string name = "") => CreateButton(container.name, position, offset, command, color, isProtected, name);
 	public LuiContainer CreateButton(LuiContainer container, LuiOffset offset, string command, string color, bool isProtected = true, string name = "") => CreateButton(container.name, LuiPosition.None, offset, command, color, isProtected, name);
 	public LuiContainer CreateButton(string parent, LuiOffset offset, string command, string color, bool isProtected = true, string name = "") => CreateButton(parent, LuiPosition.None, offset, command, color, isProtected, name);
 
@@ -446,12 +460,54 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-	#endregion
-	
-	/// <summary>
-	/// Gets the built UI in bytes. Useful when redrawing whole UI, and we want to minimalize delay between destroy and draw.
-	/// </summary>
-	public byte[] GetUiBytes()
+    public LuiContainer CreateCanvasGroup(LuiContainer container, LuiPosition position, LuiOffset offset, float alpha = -1f, bool blocksRaycasts = true, bool interactable = true, string name = "") => CreateCanvasGroup(container.name, position, offset, alpha, blocksRaycasts, interactable, name);
+    public LuiContainer CreateCanvasGroup(LuiContainer container, LuiOffset offset, float alpha = -1f, bool blocksRaycasts = true, bool interactable = true, string name = "") => CreateCanvasGroup(container.name, LuiPosition.None, offset, alpha, blocksRaycasts, interactable, name);
+    public LuiContainer CreateCanvasGroup(string parent, LuiOffset offset, float alpha = -1f, bool blocksRaycasts = true, bool interactable = true, string name = "") => CreateCanvasGroup(parent, LuiPosition.None, offset, alpha, blocksRaycasts, interactable, name);
+
+    public LuiContainer CreateCanvasGroup(string parent, LuiPosition position, LuiOffset offset, float alpha = -1f, bool blocksRaycasts = true, bool interactable = true, string name = "")
+    {
+        LuiContainer cont = CreateEmptyContainer(parent, name);
+        cont.SetAnchorAndOffset(position, offset);
+        cont.SetCanvasGroup(alpha, blocksRaycasts, interactable);
+        elements.Add(cont);
+        return cont;
+    }
+
+    public LuiContainer CreateMask(LuiContainer container, LuiPosition position, LuiOffset offset, bool showMaskGraphic = true, string color = null, string name = "") => CreateMask(container.name, position, offset, showMaskGraphic, color, name);
+    public LuiContainer CreateMask(LuiContainer container, LuiOffset offset, bool showMaskGraphic = true, string color = null, string name = "") => CreateMask(container.name, LuiPosition.None, offset, showMaskGraphic, color, name);
+    public LuiContainer CreateMask(string parent, LuiOffset offset, bool showMaskGraphic = true, string color = null, string name = "") => CreateMask(parent, LuiPosition.None, offset, showMaskGraphic, color, name);
+
+    public LuiContainer CreateMask(string parent, LuiPosition position, LuiOffset offset, bool showMaskGraphic = true, string color = null, string name = "")
+    {
+        LuiContainer cont = CreateEmptyContainer(parent, name);
+        cont.SetAnchorAndOffset(position, offset);
+        if (color != null)
+            cont.SetColor(color);
+        cont.SetMask(showMaskGraphic);
+        elements.Add(cont);
+        return cont;
+    }
+
+    public LuiContainer CreateTooltip(LuiContainer container, LuiPosition position, LuiOffset offset, string text, CommunityEntity.TooltipType? tooltipType = null, string tooltipOffset = null, bool useCentre = false, Tooltip.DelayType? delay = null, TooltipContainer.PositionMode? positionMode = null, string name = "") => CreateTooltip(container.name, position, offset, text, tooltipType, tooltipOffset, useCentre, delay, positionMode, name);
+    public LuiContainer CreateTooltip(LuiContainer container, LuiOffset offset, string text, CommunityEntity.TooltipType? tooltipType = null, string tooltipOffset = null, bool useCentre = false, Tooltip.DelayType? delay = null, TooltipContainer.PositionMode? positionMode = null, string name = "") => CreateTooltip(container.name, LuiPosition.None, offset, text, tooltipType, tooltipOffset, useCentre, delay, positionMode, name);
+    public LuiContainer CreateTooltip(string parent, LuiOffset offset, string text, CommunityEntity.TooltipType? tooltipType = null, string tooltipOffset = null, bool useCentre = false, Tooltip.DelayType? delay = null, TooltipContainer.PositionMode? positionMode = null, string name = "") => CreateTooltip(parent, LuiPosition.None, offset, text, tooltipType, tooltipOffset, useCentre, delay, positionMode, name);
+
+    public LuiContainer CreateTooltip(string parent, LuiPosition position, LuiOffset offset, string text, CommunityEntity.TooltipType? tooltipType = null, string tooltipOffset = null, bool useCentre = false, Tooltip.DelayType? delay = null, TooltipContainer.PositionMode? positionMode = null, string name = "")
+    {
+        LuiContainer cont = CreateEmptyContainer(parent, name);
+        cont.SetAnchorAndOffset(position, offset);
+        cont.SetColor(LuiColors.Transparent);
+        cont.SetTooltip(text, tooltipType, tooltipOffset, useCentre, delay, positionMode);
+        elements.Add(cont);
+        return cont;
+    }
+
+    #endregion
+
+    /// <summary>
+    /// Gets the built UI in bytes. Useful when redrawing whole UI, and we want to minimalize delay between destroy and draw.
+    /// </summary>
+    public byte[] GetUiBytes()
 	{
 		LUIBuilder cbi = new LUIBuilder(this);
 		return cbi.GetMergedBytes();
@@ -990,7 +1046,22 @@ public class LUI : IDisposable
 			return this;
 		}
 
-		public LuiContainer SetItemIcon(int itemid, ulong skinid)
+        public LuiContainer SetPpuMultiplier(float ppuMultiplier)
+        {
+            if (luiComponents.TryGetValue<LuiImageComp>(LuiCompType.Image, out var img))
+            {
+                img.ppuMultiplier = ppuMultiplier;
+            }
+            else
+            {
+                img = LuiPool.GetImage();
+                img.ppuMultiplier = ppuMultiplier;
+                luiComponents.Add(img.type, img);
+            }
+            return this;
+        }
+
+        public LuiContainer SetItemIcon(int itemid, ulong skinid)
 		{
 			if (luiComponents.TryGetValue<LuiImageComp>(LuiCompType.Image, out var img))
 			{
@@ -1227,11 +1298,26 @@ public class LUI : IDisposable
 			return this;
 		}
 
-		#endregion
+        public LuiContainer SetButtonInteractable(bool interactable)
+        {
+            if (luiComponents.TryGetValue<LuiButtonComp>(LuiCompType.Button, out var button))
+            {
+                button.interactable = interactable;
+            }
+            else
+            {
+                button = LuiPool.GetButton();
+                button.interactable = interactable;
+                luiComponents.Add(button.type, button);
+            }
+            return this;
+        }
 
-		#region Container Methods - LuiOutlineComp
+        #endregion
 
-		public LuiContainer SetOutline(string color, Vector2 distance, bool useGraphicAlpha = false)
+        #region Container Methods - LuiOutlineComp
+
+        public LuiContainer SetOutline(string color, Vector2 distance, bool useGraphicAlpha = false)
 		{
 			if (luiComponents.TryGetValue<LuiOutlineComp>(LuiCompType.Outline, out var outline))
 			{
@@ -1389,11 +1475,26 @@ public class LUI : IDisposable
 			return this;
 		}
 
-		#endregion
+        public LuiContainer SetInputInteractable(bool interactable)
+        {
+            if (luiComponents.TryGetValue<LuiInputComp>(LuiCompType.InputField, out var input))
+            {
+                input.interactable = interactable;
+            }
+            else
+            {
+                input = LuiPool.GetInput();
+                input.interactable = interactable;
+                luiComponents.Add(input.type, input);
+            }
+            return this;
+        }
 
-		#region Container Methods - LuiCursorComp
+        #endregion
 
-		public LuiContainer AddCursor()
+        #region Container Methods - LuiCursorComp
+
+        public LuiContainer AddCursor()
 		{
 			if (!luiComponents.TryGetValue<LuiCursorComp>(LuiCompType.Button, out var cursor))
 			{
@@ -2237,9 +2338,82 @@ public class LUI : IDisposable
 			return this;
 		}
 
-		#endregion
+        #endregion
 
-	}
+        #region Container Methods - LuiCanvasGroupComp
+
+        public LuiContainer SetCanvasGroup(float alpha = -1f, bool blocksRaycasts = true, bool interactable = true)
+        {
+            if (luiComponents.TryGetValue<LuiCanvasGroupComp>(LuiCompType.CanvasGroup, out var canvasGroup))
+            {
+                if (alpha != -1f)
+                    canvasGroup.alpha = alpha;
+                canvasGroup.blocksRaycasts = blocksRaycasts;
+                canvasGroup.interactable = interactable;
+            }
+            else
+            {
+                canvasGroup = LuiPool.GetCanvasGroup();
+                if (alpha != -1f)
+                    canvasGroup.alpha = alpha;
+                canvasGroup.blocksRaycasts = blocksRaycasts;
+                canvasGroup.interactable = interactable;
+                luiComponents.Add(canvasGroup.type, canvasGroup);
+            }
+            return this;
+        }
+
+        #endregion
+
+        #region Container Methods - LuiMaskComp
+
+        public LuiContainer SetMask(bool showMaskGraphic = true)
+        {
+            if (luiComponents.TryGetValue<LuiMaskComp>(LuiCompType.Mask, out var mask))
+            {
+                mask.showMaskGraphic = showMaskGraphic;
+            }
+            else
+            {
+                mask = LuiPool.GetMask();
+                mask.showMaskGraphic = showMaskGraphic;
+                luiComponents.Add(mask.type, mask);
+            }
+            return this;
+        }
+
+        #endregion
+
+        #region Container Methods - LuiTooltipComp
+
+        public LuiContainer SetTooltip(string text, CommunityEntity.TooltipType? tooltipType = null, string offset = null, bool useCentre = false, Tooltip.DelayType? delay = null, TooltipContainer.PositionMode? position = null)
+        {
+            if (luiComponents.TryGetValue<LuiTooltipComp>(LuiCompType.Tooltip, out var tooltip))
+            {
+                tooltip.text = text;
+                tooltip.tooltipType = tooltipType.ToString();
+                tooltip.offset = offset;
+                tooltip.useCentre = useCentre;
+                tooltip.delay = delay.ToString();
+                tooltip.position = position.ToString();
+            }
+            else
+            {
+                tooltip = LuiPool.GetTooltip();
+                tooltip.text = text;
+                tooltip.tooltipType = tooltipType.ToString();
+                tooltip.offset = offset;
+                tooltip.useCentre = useCentre;
+                tooltip.delay = delay.ToString();
+                tooltip.position = position.ToString();
+                luiComponents.Add(tooltip.type, tooltip);
+            }
+            return this;
+        }
+
+        #endregion
+
+    }
 }
 
 public static class LuiColors
@@ -2425,14 +2599,20 @@ public enum LuiCompType
 	Slot,
 	NeedsKeyboard,
 	ScrollView,
+    CanvasGroup,
+    Mask,
+    Tooltip,
 }
 
 public class LuiCompBase
 {
 	public LuiCompType type;
 	public bool enabled = true;
-	public float fadeIn; //Present in like 80% of elements but to reduce method list, adding it here.
-	public string placeholderParentId; //Present in like 80% of elements but to reduce method list, adding it here.
+
+    //All below present in like 80% of elements but to reduce method list, adding it here.
+    public float fadeIn;
+    public bool blocksRaycast = true;
+    public string placeholderParentId;
 }
 
 public class LuiTextComp : LuiCompBase
@@ -2461,8 +2641,9 @@ public class LuiImageComp : LuiCompBase
 	public string slice;
 	public int itemid;
 	public ulong skinid;
+    public float ppuMultiplier = -1;
 
-	public LuiImageComp()
+    public LuiImageComp()
 	{
 		type = LuiCompType.Image;
 	}
@@ -2498,8 +2679,9 @@ public class LuiButtonComp : LuiCompBase
 	public string disabledColor;
 	public float colorMultiplier = -1;
 	public float fadeDuration = -1;
+    public bool interactable = true;
 
-	public LuiButtonComp()
+    public LuiButtonComp()
 	{
 		type = LuiCompType.Button;
 	}
@@ -2533,8 +2715,9 @@ public class LuiInputComp : LuiCompBase
 	public bool needsKeyboard;
 	public bool hudMenuInput;
 	public bool autofocus;
+    public bool interactable = true;
 
-	public LuiInputComp()
+    public LuiInputComp()
 	{
 		type = LuiCompType.InputField;
 	}
@@ -2737,6 +2920,44 @@ public struct LuiScrollbar
 	public string trackColor;
 }
 
+public class LuiCanvasGroupComp : LuiCompBase
+{
+    public float alpha = -1;
+    public bool blocksRaycasts = true;
+    public bool interactable = true;
+    public Vector2 fade = LUI.defaultFade;
+
+    public LuiCanvasGroupComp()
+    {
+        type = LuiCompType.CanvasGroup;
+    }
+}
+
+public class LuiMaskComp : LuiCompBase
+{
+    public bool showMaskGraphic = true;
+
+    public LuiMaskComp()
+    {
+        type = LuiCompType.Mask;
+    }
+}
+
+public class LuiTooltipComp : LuiCompBase
+{
+    public string tooltipType;
+    public string offset;
+    public bool useCentre;
+    public string text;
+    public string delay;
+    public string position;
+
+    public LuiTooltipComp()
+    {
+        type = LuiCompType.Tooltip;
+    }
+}
+
 //Uncomment when draggables will be out and there won't be anything like that in CUI.
 /*public enum DraggablePositionSendType
 {
@@ -2783,8 +3004,11 @@ public static class LuiPool
 	private static readonly Stack<LuiCompBase> _slots = new();
 	private static readonly Stack<LuiCompBase> _keyboards = new();
 	private static readonly Stack<LuiCompBase> _scrolls = new();
+    private static readonly Stack<LuiCompBase> _canvasGroups = new();
+    private static readonly Stack<LuiCompBase> _masks = new();
+    private static readonly Stack<LuiCompBase> _tooltips = new();
 
-	public static int poolElements => _containers.Count + _texts.Count + _images.Count + _rawImages.Count + _buttons.Count + _outlines.Count + _inputs.Count + _cursors.Count + _rects.Count + _countdowns.Count + _draggables.Count + _slots.Count + _keyboards.Count + _scrolls.Count;
+    public static int poolElements => _containers.Count + _texts.Count + _images.Count + _rawImages.Count + _buttons.Count + _outlines.Count + _inputs.Count + _cursors.Count + _rects.Count + _countdowns.Count + _draggables.Count + _slots.Count + _keyboards.Count + _scrolls.Count;
 
 	public static void ReturnComp<T>(T component) where T : LuiCompBase
 	{
@@ -2805,7 +3029,10 @@ public static class LuiPool
 			case LuiCompType.Slot: _slots.Push(component); break;
 			case LuiCompType.NeedsKeyboard: _keyboards.Push(component); break;
 			case LuiCompType.ScrollView: _scrolls.Push(component); break;
-		}
+            case LuiCompType.CanvasGroup: _canvasGroups.Push(component); break;
+            case LuiCompType.Mask: _masks.Push(component); break;
+            case LuiCompType.Tooltip: _tooltips.Push(component); break;
+        }
 	}
 
 	public static LuiTextComp GetText()
@@ -2822,7 +3049,8 @@ public static class LuiPool
 		comp.color = null;
 		comp.verticalOverflow = null;
 		comp.fadeIn = 0;
-		comp.placeholderParentId = null;
+        comp.blocksRaycast = true;
+        comp.placeholderParentId = null;
 		return comp;
 	}
 
@@ -2842,8 +3070,10 @@ public static class LuiPool
 		comp.png = null;
 		comp.itemid = 0;
 		comp.skinid = 0;
-		comp.fadeIn = 0;
-		comp.placeholderParentId = null;
+        comp.ppuMultiplier = -1;
+        comp.fadeIn = 0;
+        comp.blocksRaycast = true;
+        comp.placeholderParentId = null;
 		return comp;
 	}
 
@@ -2861,7 +3091,8 @@ public static class LuiPool
 		comp.png = null;
 		comp.steamid = null;
 		comp.fadeIn = 0;
-		comp.placeholderParentId = null;
+        comp.blocksRaycast = true;
+        comp.placeholderParentId = null;
 		return comp;
 	}
 
@@ -2885,8 +3116,10 @@ public static class LuiPool
 		comp.disabledColor = null;
 		comp.colorMultiplier = -1;
 		comp.fadeDuration = -1;
-		comp.fadeIn = 0;
-		comp.placeholderParentId = null;
+        comp.interactable = true;
+        comp.fadeIn = 0;
+        comp.blocksRaycast = true;
+        comp.placeholderParentId = null;
 		return comp;
 	}
 
@@ -2925,8 +3158,10 @@ public static class LuiPool
 		comp.needsKeyboard = false;
 		comp.hudMenuInput = false;
 		comp.autofocus = false;
-		comp.fadeIn = 0;
-		comp.placeholderParentId = null;
+        comp.interactable = true;
+        comp.fadeIn = 0;
+        comp.blocksRaycast = true;
+        comp.placeholderParentId = null;
 		return comp;
 	}
 
@@ -3121,7 +3356,47 @@ public static class LuiPool
 		return comp;
 	}
 
-	public static LuiCompType GetLuiCompType(Type type)
+    public static LuiCanvasGroupComp GetCanvasGroup()
+    {
+        if (_canvasGroups.Count == 0)
+            return new();
+
+        LuiCanvasGroupComp comp = _canvasGroups.Pop() as LuiCanvasGroupComp;
+        comp.enabled = true;
+        comp.alpha = -1;
+        comp.blocksRaycasts = true;
+        comp.interactable = true;
+        return comp;
+    }
+
+    public static LuiMaskComp GetMask()
+    {
+        if (_masks.Count == 0)
+            return new();
+
+        LuiMaskComp comp = _masks.Pop() as LuiMaskComp;
+        comp.enabled = true;
+        comp.showMaskGraphic = true;
+        return comp;
+    }
+
+    public static LuiTooltipComp GetTooltip()
+    {
+        if (_tooltips.Count == 0)
+            return new();
+
+        LuiTooltipComp comp = _tooltips.Pop() as LuiTooltipComp;
+        comp.enabled = true;
+        comp.tooltipType = null;
+        comp.offset = null;
+        comp.useCentre = false;
+        comp.text = null;
+        comp.delay = null;
+        comp.position = null;
+        return comp;
+    }
+
+    public static LuiCompType GetLuiCompType(Type type)
 	{
 		return type switch
 		{
@@ -3143,7 +3418,10 @@ public static class LuiPool
 			not null when type == typeof(LuiSlotComp) => LuiCompType.Slot,
 			not null when type == typeof(LuiKeyboardComp) => LuiCompType.NeedsKeyboard,
 			not null when type == typeof(LuiScrollComp) => LuiCompType.ScrollView,
-			_ => LuiCompType.Image
+            not null when type == typeof(LuiCanvasGroupComp) => LuiCompType.CanvasGroup,
+            not null when type == typeof(LuiMaskComp) => LuiCompType.Mask,
+            not null when type == typeof(LuiTooltipComp) => LuiCompType.Tooltip,
+            _ => LuiCompType.Image
 		};
 	}
 
@@ -3169,7 +3447,10 @@ public static class LuiPool
 			not null when type == typeof(LuiSlotComp) => LuiPool.GetSlot() as T,
 			not null when type == typeof(LuiKeyboardComp) => LuiPool.GetKeyboard() as T,
 			not null when type == typeof(LuiScrollComp) => LuiPool.GetScroll() as T,
-			_ => LuiPool.GetImage() as T,
+            not null when type == typeof(LuiCanvasGroupComp) => LuiPool.GetCanvasGroup() as T,
+            not null when type == typeof(LuiMaskComp) => LuiPool.GetMask() as T,
+            not null when type == typeof(LuiTooltipComp) => LuiPool.GetTooltip() as T,
+            _ => LuiPool.GetImage() as T,
 		};
 	}
 
