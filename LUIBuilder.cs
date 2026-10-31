@@ -191,7 +191,7 @@ public class LUIBuilder
     private static void BuildOutline(Dictionary<string, object> c, LuiOutlineComp o)
     {
         if (o.color != null)         c["color"]          = o.color;
-        if (o.distance != default)   c["distance"]       = o.distance;
+        if (o.distance != default)   c["distance"]       = VectorToString(o.distance);
         if (o.useGraphicAlpha)       c["useGraphicAlpha"]= true;
     }
 
@@ -269,8 +269,8 @@ public class LUIBuilder
 
     private static void BuildGridLayoutGroup(Dictionary<string, object> c, LuiGridLayoutGroupComp g)
     {
-        if (g.cellSize != new Vector2(100, 100)) c["cellSize"]        = g.cellSize;
-        if (g.spacing != default)                c["spacing"]         = g.spacing;
+        if (g.cellSize != new Vector2(100, 100)) c["cellSize"]        = VectorToString(g.cellSize);
+        if (g.spacing != default)                c["spacing"]         = VectorToString(g.spacing);
         if (g.startCorner != null)               c["startCorner"]     = g.startCorner;
         if (g.startAxis != null)                 c["startAxis"]       = g.startAxis;
         if (g.childAlignment != null)            c["childAlignment"]  = g.childAlignment;
@@ -305,8 +305,8 @@ public class LUIBuilder
         if (d.dragAlpha != -1)          c["dragAlpha"]          = d.dragAlpha;
         if (d.parentLimitIndex != -1)   c["parentLimitIndex"]   = d.parentLimitIndex;
         if (d.filter != null)           c["filter"]             = d.filter;
-        if (d.parentPadding != default) c["parentPadding"]      = d.parentPadding;
-        if (d.anchorOffset != default)  c["anchorOffset"]       = d.anchorOffset;
+        if (d.parentPadding != default) c["parentPadding"]      = VectorToString(d.parentPadding);
+        if (d.anchorOffset != default)  c["anchorOffset"]       = VectorToString(d.anchorOffset);
         if (d.keepOnTop)                c["keepOnTop"]          = d.keepOnTop;
         if (d.positionRPC != null)      c["positionRPC"]        = d.positionRPC;
         if (d.moveToAnchor)             c["moveToAnchor"]       = d.moveToAnchor;
@@ -337,7 +337,7 @@ public class LUIBuilder
                 transform["offsetmax"] = VectorToString(s.offset.offsetMax);
             }
             if (s.pivot != LUI.defaultPivot)
-                c["pivot"] = s.pivot;
+                c["pivot"] = VectorToString(s.pivot);
 
             c["contentTransform"] = transform;
         }
