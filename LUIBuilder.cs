@@ -34,6 +34,9 @@ public class LUIBuilder
         [LuiCompType.Slot]                 = "Slot",
         [LuiCompType.NeedsKeyboard]        = "NeedsKeyboard",
         [LuiCompType.ScrollView]           = "UnityEngine.UI.ScrollView",
+        [LuiCompType.CanvasGroup]          = "UnityEngine.UI.CanvasGroup",
+        [LuiCompType.Mask]                 = "UnityEngine.UI.Mask",
+        [LuiCompType.Tooltip]              = "Tooltip",
     };
 
     private LUI lui { get; }
@@ -51,7 +54,8 @@ public class LUIBuilder
                 destroyUi  = element.destroyUi,
                 update     = element.update,
                 fadeOut    = element.fadeOut,
-                parent     = element.parent
+                parent     = element.parent,
+                activeSelf = element.activeSelf ? null : false,
             };
 
             foreach (LuiCompBase component in element.luiComponents)
@@ -82,6 +86,7 @@ public class LUIBuilder
         if (!component.enabled)                        comp["enabled"]              = false;
         if (component.fadeIn > 0)                      comp["fadeIn"]               = component.fadeIn;
         if (component.placeholderParentId != null)     comp["placeholderParentId"]  = component.placeholderParentId;
+        if (!component.blocksRaycast)                  comp["blocksRaycast"]        = false;
 
         switch (component.type)
         {
@@ -133,6 +138,15 @@ public class LUIBuilder
             case LuiCompType.ScrollView:
                 BuildScrollView(comp, (LuiScrollComp)component);
                 break;
+            case LuiCompType.CanvasGroup:
+                BuildCanvasGroup(comp, (LuiCanvasGroupComp)component);
+                break;
+            case LuiCompType.Mask:
+                BuildMask(comp, (LuiMaskComp)component);
+                break;
+            case LuiCompType.Tooltip:
+                BuildTooltip(comp, (LuiTooltipComp)component);
+                break;
         }
 
         return comp;
@@ -159,6 +173,7 @@ public class LUIBuilder
         if (i.slice != null)        c["slice"]     = i.slice;
         if (i.itemid != 0)          c["itemid"]    = i.itemid;
         if (i.skinid != 0)          c["skinid"]    = i.skinid;
+        if (i.ppuMultiplier != -1)  c["ppuMultiplier"] = i.ppuMultiplier;
     }
 
     private static void BuildRawImage(Dictionary<string, object> c, LuiRawImageComp r)
@@ -186,12 +201,13 @@ public class LUIBuilder
         if (b.disabledColor != null)        c["disabledColor"]     = b.disabledColor;
         if (b.colorMultiplier != -1)        c["colorMultiplier"]   = b.colorMultiplier;
         if (b.fadeDuration != -1)           c["fadeDuration"]      = b.fadeDuration;
+        if (!b.interactable)                c["interactable"]      = false;
     }
 
     private static void BuildOutline(Dictionary<string, object> c, LuiOutlineComp o)
     {
         if (o.color != null)         c["color"]          = o.color;
-        if (o.distance != default)   c["distance"]       = o.distance;
+        if (o.distance != default)   c["distance"]       = VectorToString(o.distance);
         if (o.useGraphicAlpha)       c["useGraphicAlpha"]= true;
     }
 
@@ -211,6 +227,7 @@ public class LUIBuilder
         if (i.needsKeyboard)         c["needsKeyboard"]  = true;
         if (i.hudMenuInput)          c["hudMenuInput"]   = true;
         if (i.autofocus)             c["autofocus"]      = true;
+        if (!i.interactable)         c["interactable"]   = false;
     }
 
     private static void BuildRectTransform(Dictionary<string, object> c, LuiRectTransformComp r)
@@ -269,8 +286,8 @@ public class LUIBuilder
 
     private static void BuildGridLayoutGroup(Dictionary<string, object> c, LuiGridLayoutGroupComp g)
     {
-        if (g.cellSize != new Vector2(100, 100)) c["cellSize"]        = g.cellSize;
-        if (g.spacing != default)                c["spacing"]         = g.spacing;
+        if (g.cellSize != new Vector2(100, 100)) c["cellSize"]        = VectorToString(g.cellSize);
+        if (g.spacing != default)                c["spacing"]         = VectorToString(g.spacing);
         if (g.startCorner != null)               c["startCorner"]     = g.startCorner;
         if (g.startAxis != null)                 c["startAxis"]       = g.startAxis;
         if (g.childAlignment != null)            c["childAlignment"]  = g.childAlignment;
@@ -305,8 +322,8 @@ public class LUIBuilder
         if (d.dragAlpha != -1)          c["dragAlpha"]          = d.dragAlpha;
         if (d.parentLimitIndex != -1)   c["parentLimitIndex"]   = d.parentLimitIndex;
         if (d.filter != null)           c["filter"]             = d.filter;
-        if (d.parentPadding != default) c["parentPadding"]      = d.parentPadding;
-        if (d.anchorOffset != default)  c["anchorOffset"]       = d.anchorOffset;
+        if (d.parentPadding != default) c["parentPadding"]      = VectorToString(d.parentPadding);
+        if (d.anchorOffset != default)  c["anchorOffset"]       = VectorToString(d.anchorOffset);
         if (d.keepOnTop)                c["keepOnTop"]          = d.keepOnTop;
         if (d.positionRPC != null)      c["positionRPC"]        = d.positionRPC;
         if (d.moveToAnchor)             c["moveToAnchor"]       = d.moveToAnchor;
@@ -337,7 +354,7 @@ public class LUIBuilder
                 transform["offsetmax"] = VectorToString(s.offset.offsetMax);
             }
             if (s.pivot != LUI.defaultPivot)
-                c["pivot"] = s.pivot;
+                c["pivot"] = VectorToString(s.pivot);
 
             c["contentTransform"] = transform;
         }
@@ -353,6 +370,29 @@ public class LUIBuilder
         if (s.vertical)                 c["verticalScrollbar"]           = WriteScrollBar(s.verticalScrollbar);
         if (s.horizontalNormalizedPosition != 0) c["horizontalNormalizedPosition"] = s.horizontalNormalizedPosition;
         if (s.verticalNormalizedPosition != 0)   c["verticalNormalizedPosition"]   = s.verticalNormalizedPosition;
+    }
+
+    private static void BuildCanvasGroup(Dictionary<string, object> c, LuiCanvasGroupComp g)
+    {
+        if (g.alpha != -1) c["alpha"] = g.alpha;
+        if (!g.blocksRaycasts) c["blocksRaycasts"] = false;
+        if (!g.interactable) c["interactable"] = false;
+        if (g.fade != LUI.defaultFade) c["fade"] = VectorToString(g.fade);
+    }
+
+    private static void BuildMask(Dictionary<string, object> c, LuiMaskComp m)
+    {
+        if (!m.showMaskGraphic) c["showMaskGraphic"] = false;
+    }
+
+    private static void BuildTooltip(Dictionary<string, object> c, LuiTooltipComp t)
+    {
+        if (t.tooltipType != null) c["tooltipType"] = t.tooltipType;
+        if (t.offset != null) c["offset"] = t.offset;
+        if (t.useCentre) c["useCentre"] = true;
+        if (t.text != null) c["text"] = t.text;
+        if (t.delay != null) c["delay"] = t.delay;
+        if (t.position != null) c["position"] = t.position;
     }
 
     private static Dictionary<string, object> WriteScrollBar(LuiScrollbar s)
@@ -379,5 +419,6 @@ public class LUIBuilder
         public string destroyUi;
         public float fadeOut;
         public bool update;
+        public bool? activeSelf;
     }
 }
