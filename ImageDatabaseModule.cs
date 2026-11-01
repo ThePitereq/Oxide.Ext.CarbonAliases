@@ -46,6 +46,8 @@ namespace Oxide.Ext.CarbonAliases
         
         public void DeleteImage(string url) => ImageLibrary?.Call("RemoveImage", url);
         
+        public void AddImage(string keyOrUrl, byte[] imageData) => ImageLibrary?.Call<bool>("AddImageData", keyOrUrl, imageData, 0UL);
+        
         public void AddMap(string key, string url) => Queue(false, key, url);
         
         public void RemoveMap(string key, string url) { }

@@ -6,7 +6,7 @@ namespace Oxide.Ext.CarbonAliases
     public class CarbonExtension(ExtensionManager manager) : Extension(manager)
     {
         public override string Name => "CarbonAliases";
-        public override VersionNumber Version => new(1, 3, 0);
+        public override VersionNumber Version => new(1, 4, 0);
         public override string Author => "ThePitereq";
 
         internal static CUI carbonCUI;

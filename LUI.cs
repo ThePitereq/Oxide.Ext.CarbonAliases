@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -10,12 +11,12 @@ using UnityEngine.UI;
 
 namespace Oxide.Ext.CarbonAliases;
 
+//Code from Carbon made by ThePitereq and contributors
+//Source: https://github.com/CarbonCommunity/Carbon/blob/main/src/Carbon.Components/Carbon.Common/src/Carbon/Components/LUI.cs
+
 public class LUI : IDisposable
 {
-    //Code from Carbon made by ThePitereq
-    //Source: https://github.com/CarbonCommunity/Carbon/blob/main/src/Carbon.Components/Carbon.Common/src/Carbon/Components/LUI.cs
-
-    public readonly List<LuiContainer> elements = new();
+	public readonly List<LuiContainer> elements = new(32);
 
 	private readonly CUI _parent;
 
@@ -27,6 +28,16 @@ public class LUI : IDisposable
 	/// </summary>
 	public bool generateNames = true;
 
+	private static readonly System.Random _randomNameGenerator = new();
+
+	private static string GetRandomString(int length)
+	{
+		var chars = new char[length];
+		for (int i = 0; i < chars.Length; i++)
+			chars[i] = (char)('a' + _randomNameGenerator.Next(26));
+		return new string(chars);
+	}
+
 	public LUI(CUI cui)
 	{
 		_parent = cui;
@@ -36,7 +47,18 @@ public class LUI : IDisposable
 	/// <summary>
 	/// Name of last created container. Used for easy new element creation to last parent without creating variable for that.
 	/// </summary>
-	public string lastName = string.Empty;
+	private LuiContainer _lastGenerated;
+	private string _lastName = string.Empty;
+
+	public string lastName
+	{
+		get => _lastGenerated != null ? _lastGenerated.name : _lastName;
+		set
+		{
+			_lastName = value;
+			_lastGenerated = null;
+		}
+	}
 
 	public static readonly Vector2 defaultPivot = new(0.5f, 0.5f);
 	public static readonly Vector2 defaultFade = new(0f, 1f);
@@ -46,7 +68,14 @@ public class LUI : IDisposable
 
 	public LuiContainer CreateParent(CUI.ClientPanels parent, LuiPosition position, string name = "") => CreateParent(_parent.GetClientPanel(parent), position, name);
 
-	public LuiContainer CreateParent(LuiContainer container, LuiPosition position, string name = "") => CreateParent(container.name, position, name);
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private static LuiContainer Reparent(LuiContainer child, LuiContainer container)
+	{
+		child.SetParentOf(container);
+		return child;
+	}
+
+	public LuiContainer CreateParent(LuiContainer container, LuiPosition position, string name = "") => Reparent(CreateParent((string)null, position, name), container);
 	public LuiContainer CreateParent(string parent, LuiPosition position, string name = "")
 	{
 		LuiContainer cont = LuiPool.GetContainer();
@@ -54,7 +83,7 @@ public class LUI : IDisposable
 		if (name != string.Empty)
 			cont.name = name;
 		else if (generateNames)
-			cont.name = _parent.Manager.AppendId();
+			cont.name = GetRandomString(4);
 		cont.SetAnchors(position);
 		elements.Add(cont);
 		return cont;
@@ -150,9 +179,8 @@ public class LUI : IDisposable
 
 	#region Panel Creation
 
-	public LuiContainer CreateEmptyContainer(LuiContainer container, string name = "", bool add = false) => CreateEmptyContainer(container.name, name, add);
+	public LuiContainer CreateEmptyContainer(LuiContainer container, string name = "", bool add = false) => Reparent(CreateEmptyContainer((string)null, name, add), container);
 
-	
 	/// <summary>
 	/// Creates empty container without anything. Shouldn't be used outside LUI library, but in rare cases might be useful.
 	/// </summary>
@@ -164,17 +192,17 @@ public class LUI : IDisposable
 			cont.name = name;
 		else if (generateNames)
 		{
-			string newName = _parent.Manager.AppendId();
-			lastName = newName;
-			cont.name = newName;
+			cont.SetGeneratedName(_parent.Manager.Identifier, _parent.Manager.NextId());
+			_lastName = null;
+			_lastGenerated = cont;
 		}
 		if (add)
 			elements.Add(cont);
 		return cont;
 	}
 
-	public LuiContainer CreatePanel(LuiContainer container, LuiPosition position, LuiOffset offset, string color, string name = "") => CreatePanel(container.name, position, offset, color, name);
-	public LuiContainer CreatePanel(LuiContainer container, LuiOffset offset, string color, string name = "") => CreatePanel(container.name, LuiPosition.None, offset, color, name);
+	public LuiContainer CreatePanel(LuiContainer container, LuiPosition position, LuiOffset offset, string color, string name = "") => Reparent(CreatePanel((string)null, position, offset, color, name), container);
+	public LuiContainer CreatePanel(LuiContainer container, LuiOffset offset, string color, string name = "") => Reparent(CreatePanel((string)null, LuiPosition.None, offset, color, name), container);
 	public LuiContainer CreatePanel(string parent, LuiOffset offset, string color, string name = "") => CreatePanel(parent, LuiPosition.None, offset, color, name);
 
 	public LuiContainer CreatePanel(string parent, LuiPosition position, LuiOffset offset, string color, string name = "")
@@ -185,8 +213,8 @@ public class LUI : IDisposable
 		elements.Add(cont);
 		return cont;
 	}
-	public LuiContainer CreateText(LuiContainer container, LuiPosition position, LuiOffset offset, int fontSize, string color, string text, TextAnchor alignment = TextAnchor.UpperLeft, string name = "") => CreateText(container.name, position, offset, fontSize, color, text, alignment, name);
-	public LuiContainer CreateText(LuiContainer container, LuiOffset offset, int fontSize, string color, string text, TextAnchor alignment = TextAnchor.UpperLeft, string name = "") => CreateText(container.name, LuiPosition.None, offset, fontSize, color, text, alignment, name);
+	public LuiContainer CreateText(LuiContainer container, LuiPosition position, LuiOffset offset, int fontSize, string color, string text, TextAnchor alignment = TextAnchor.UpperLeft, string name = "") => Reparent(CreateText((string)null, position, offset, fontSize, color, text, alignment, name), container);
+	public LuiContainer CreateText(LuiContainer container, LuiOffset offset, int fontSize, string color, string text, TextAnchor alignment = TextAnchor.UpperLeft, string name = "") => Reparent(CreateText((string)null, LuiPosition.None, offset, fontSize, color, text, alignment, name), container);
 	public LuiContainer CreateText(string parent, LuiOffset offset, int fontSize, string color, string text, TextAnchor alignment = TextAnchor.UpperLeft, string name = "") => CreateText(parent, LuiPosition.None, offset, fontSize, color, text, alignment, name);
 
 	public LuiContainer CreateText(string parent, LuiPosition position, LuiOffset offset, int fontSize, string color, string text, TextAnchor alignment = TextAnchor.MiddleCenter, string name = "")
@@ -198,8 +226,8 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-	public LuiContainer CreateSprite(LuiContainer container, LuiPosition position, LuiOffset offset, string sprite, string color = LuiColors.White, string name = "") => CreateSprite(container.name, position, offset, sprite, color, name);
-	public LuiContainer CreateSprite(LuiContainer container, LuiOffset offset, string sprite, string color = LuiColors.White, string name = "") => CreateSprite(container.name, LuiPosition.None, offset, sprite, color, name);
+	public LuiContainer CreateSprite(LuiContainer container, LuiPosition position, LuiOffset offset, string sprite, string color = LuiColors.White, string name = "") => Reparent(CreateSprite((string)null, position, offset, sprite, color, name), container);
+	public LuiContainer CreateSprite(LuiContainer container, LuiOffset offset, string sprite, string color = LuiColors.White, string name = "") => Reparent(CreateSprite((string)null, LuiPosition.None, offset, sprite, color, name), container);
 	public LuiContainer CreateSprite(string parent, LuiOffset offset, string sprite, string color = LuiColors.White, string name = "") => CreateSprite(parent, LuiPosition.None, offset, sprite, color, name);
 
 	public LuiContainer CreateSprite(string parent, LuiPosition position, LuiOffset offset, string sprite, string color = LuiColors.White, string name = "")
@@ -212,8 +240,8 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-	public LuiContainer CreateImage(LuiContainer container, LuiPosition position, LuiOffset offset, string png, string color = LuiColors.White, string name = "") => CreateImage(container.name, position, offset, png, color, name);
-	public LuiContainer CreateImage(LuiContainer container, LuiOffset offset, string png, string color = LuiColors.White, string name = "") => CreateImage(container.name, LuiPosition.None, offset, png, color, name);
+	public LuiContainer CreateImage(LuiContainer container, LuiPosition position, LuiOffset offset, string png, string color = LuiColors.White, string name = "") => Reparent(CreateImage((string)null, position, offset, png, color, name), container);
+	public LuiContainer CreateImage(LuiContainer container, LuiOffset offset, string png, string color = LuiColors.White, string name = "") => Reparent(CreateImage((string)null, LuiPosition.None, offset, png, color, name), container);
 	public LuiContainer CreateImage(string parent, LuiOffset offset, string png, string color = LuiColors.White, string name = "") => CreateImage(parent, LuiPosition.None, offset, png, color, name);
 
 	public LuiContainer CreateImage(string parent, LuiPosition position, LuiOffset offset, string png, string color = LuiColors.White, string name = "")
@@ -225,41 +253,51 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-	public LuiContainer CreateImageFromDb(LuiContainer container, LuiPosition position, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => CreateImageFromDb(container.name, position, offset, dbName, color, name);
-	public LuiContainer CreateImageFromDb(LuiContainer container, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => CreateImageFromDb(container.name, LuiPosition.None, offset, dbName, color, name);
+	public LuiContainer CreateImageFromDb(LuiContainer container, LuiPosition position, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => Reparent(CreateImageFromDb((string)null, position, offset, dbName, color, name), container);
+	public LuiContainer CreateImageFromDb(LuiContainer container, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => Reparent(CreateImageFromDb((string)null, LuiPosition.None, offset, dbName, color, name), container);
 	public LuiContainer CreateImageFromDb(string parent, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => CreateImageFromDb(parent, LuiPosition.None, offset, dbName, color, name);
 
 	public LuiContainer CreateImageFromDb(string parent, LuiPosition position, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "")
 	{
 		LuiContainer cont = CreateEmptyContainer(parent, name);
-		cont.SetAnchorAndOffset(position, offset);
 		if (imgDb.HasImage(dbName))
+		{
+			cont.SetAnchorAndOffset(position, offset);
 			cont.SetImage(imgDb.GetImageString(dbName), color);
+		}
 		else
-			Interface.Oxide.LogWarning($"[LUI] You're trying to load an image from ImageDatabase '{dbName}' which doesn't exist.");
+		{
+			Interface.Oxide.LogWarning($"[LUI] You're trying to load an image from ImageDatabase '{dbName}' which doesn't exist. Ignoring.");
+			return null;
+		}
 		elements.Add(cont);
 		return cont;
 	}
 
-	public LuiContainer CreateRawImageFromDb(LuiContainer container, LuiPosition position, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => CreateRawImageFromDb(container.name, position, offset, dbName, color, name);
-	public LuiContainer CreateRawImageFromDb(LuiContainer container, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => CreateRawImageFromDb(container.name, LuiPosition.None, offset, dbName, color, name);
+	public LuiContainer CreateRawImageFromDb(LuiContainer container, LuiPosition position, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => Reparent(CreateRawImageFromDb((string)null, position, offset, dbName, color, name), container);
+	public LuiContainer CreateRawImageFromDb(LuiContainer container, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => Reparent(CreateRawImageFromDb((string)null, LuiPosition.None, offset, dbName, color, name), container);
 	public LuiContainer CreateRawImageFromDb(string parent, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "") => CreateRawImageFromDb(parent, LuiPosition.None, offset, dbName, color, name);
 
 	public LuiContainer CreateRawImageFromDb(string parent, LuiPosition position, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "")
 	{
 		LuiContainer cont = CreateEmptyContainer(parent, name);
-		cont.SetAnchorAndOffset(position, offset);
 		if (imgDb.HasImage(dbName))
+		{
+			cont.SetAnchorAndOffset(position, offset);
 			cont.SetRawImage(imgDb.GetImageString(dbName), color);
+		}
 		else
-			Interface.Oxide.LogWarning($"[LUI] You're trying to load an image from ImageDatabase '{dbName}' which doesn't exist.");
+		{
+			Interface.Oxide.LogWarning($"[LUI] You're trying to load an image from ImageDatabase '{dbName}' which doesn't exist. Ignoring.");
+			return null;
+		}
 		elements.Add(cont);
 		return cont;
 	}
 
 
-	public LuiContainer CreateUrlImage(LuiContainer container, LuiPosition position, LuiOffset offset, string url, string color = LuiColors.White, string name = "") => CreateUrlImage(container.name, position, offset, url, color, name);
-	public LuiContainer CreateUrlImage(LuiContainer container, LuiOffset offset, string url, string color = LuiColors.White, string name = "") => CreateUrlImage(container.name, LuiPosition.None, offset, url, color, name);
+	public LuiContainer CreateUrlImage(LuiContainer container, LuiPosition position, LuiOffset offset, string url, string color = LuiColors.White, string name = "") => Reparent(CreateUrlImage((string)null, position, offset, url, color, name), container);
+	public LuiContainer CreateUrlImage(LuiContainer container, LuiOffset offset, string url, string color = LuiColors.White, string name = "") => Reparent(CreateUrlImage((string)null, LuiPosition.None, offset, url, color, name), container);
 	public LuiContainer CreateUrlImage(string parent, LuiOffset offset, string url, string color = LuiColors.White, string name = "") => CreateUrlImage(parent, LuiPosition.None, offset, url, color, name);
 
 	public LuiContainer CreateUrlImage(string parent, LuiPosition position, LuiOffset offset, string url, string color = LuiColors.White, string name = "")
@@ -271,8 +309,8 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-	public LuiContainer CreateItemIcon(LuiContainer container, LuiPosition position, LuiOffset offset, string shortname, ulong skinId = 0, string color = "", string name = "") => CreateItemIcon(container.name, position, offset, shortname, skinId, color, name);
-	public LuiContainer CreateItemIcon(LuiContainer container, LuiOffset offset, string shortname, ulong skinId = 0, string color = "", string name = "") => CreateItemIcon(container.name, LuiPosition.None, offset, shortname, skinId, color, name);
+	public LuiContainer CreateItemIcon(LuiContainer container, LuiPosition position, LuiOffset offset, string shortname, ulong skinId = 0, string color = "", string name = "") => Reparent(CreateItemIcon((string)null, position, offset, shortname, skinId, color, name), container);
+	public LuiContainer CreateItemIcon(LuiContainer container, LuiOffset offset, string shortname, ulong skinId = 0, string color = "", string name = "") => Reparent(CreateItemIcon((string)null, LuiPosition.None, offset, shortname, skinId, color, name), container);
 	public LuiContainer CreateItemIcon(string parent, LuiOffset offset, string shortname, ulong skinId = 0, string color = "", string name = "") => CreateItemIcon(parent, LuiPosition.None, offset, shortname, skinId, color, name);
 
 	public LuiContainer CreateItemIcon(string parent, LuiPosition position, LuiOffset offset, string shortname, ulong skinId = 0, string color = "", string name = "")
@@ -280,15 +318,12 @@ public class LUI : IDisposable
 		ItemDefinition def = ItemManager.FindItemDefinition(shortname);
 		if (def)
 			return CreateItemIcon(parent, position, offset, def.itemid, skinId, color, name);
-		Interface.Oxide.LogWarning($"[LUI] We couldn't find '{shortname}' as valid item shortname.");
-		LuiContainer cont = CreateEmptyContainer(parent, name);
-		cont.SetAnchorAndOffset(position, offset);
-		elements.Add(cont);
-		return cont;
+		Interface.Oxide.LogWarning($"[LUI] We couldn't find '{shortname}' as valid item shortname. Ignoring.");
+		return null;
 	}
 
-	public LuiContainer CreateItemIcon(LuiContainer container, LuiPosition position, LuiOffset offset, int itemId, ulong skinId = 0, string color = "", string name = "") => CreateItemIcon(container.name, position, offset, itemId, skinId, color, name);
-	public LuiContainer CreateItemIcon(LuiContainer container, LuiOffset offset, int itemId, ulong skinId = 0, string color = "", string name = "") => CreateItemIcon(container.name, LuiPosition.None, offset, itemId, skinId, color, name);
+	public LuiContainer CreateItemIcon(LuiContainer container, LuiPosition position, LuiOffset offset, int itemId, ulong skinId = 0, string color = "", string name = "") => Reparent(CreateItemIcon((string)null, position, offset, itemId, skinId, color, name), container);
+	public LuiContainer CreateItemIcon(LuiContainer container, LuiOffset offset, int itemId, ulong skinId = 0, string color = "", string name = "") => Reparent(CreateItemIcon((string)null, LuiPosition.None, offset, itemId, skinId, color, name), container);
 	public LuiContainer CreateItemIcon(string parent, LuiOffset offset, int itemId, ulong skinId = 0, string color = "", string name = "") => CreateItemIcon(parent, LuiPosition.None, offset, itemId, skinId, color, name);
 
 	public LuiContainer CreateItemIcon(string parent, LuiPosition position, LuiOffset offset, int itemId, ulong skinId = 0, string color = "", string name = "")
@@ -302,21 +337,20 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-    public LuiContainer CreateSteamAvatar(LuiContainer container, LuiPosition position, LuiOffset offset, string steamId, string color = null, string name = "") => CreateSteamAvatar(container.name, position, offset, steamId, color, name);
-    public LuiContainer CreateSteamAvatar(LuiContainer container, LuiOffset offset, string steamId, string color = null, string name = "") => CreateSteamAvatar(container.name, LuiPosition.None, offset, steamId, color, name);
-    public LuiContainer CreateSteamAvatar(string parent, LuiOffset offset, string steamId, string color = null, string name = "") => CreateSteamAvatar(parent, LuiPosition.None, offset, steamId, color, name);
+	public LuiContainer CreateSteamAvatar(LuiContainer container, LuiPosition position, LuiOffset offset, string steamId, string color = null, string name = "") => Reparent(CreateSteamAvatar((string)null, position, offset, steamId, color, name), container);
+	public LuiContainer CreateSteamAvatar(LuiContainer container, LuiOffset offset, string steamId, string color = null, string name = "") => Reparent(CreateSteamAvatar((string)null, LuiPosition.None, offset, steamId, color, name), container);
+	public LuiContainer CreateSteamAvatar(string parent, LuiOffset offset, string steamId, string color = null, string name = "") => CreateSteamAvatar(parent, LuiPosition.None, offset, steamId, color, name);
+	public LuiContainer CreateSteamAvatar(string parent, LuiPosition position, LuiOffset offset, string steamId, string color = null, string name = "")
+	{
+		LuiContainer cont = CreateEmptyContainer(parent, name);
+		cont.SetAnchorAndOffset(position, offset);
+		cont.SetSteamIcon(steamId, color);
+		elements.Add(cont);
+		return cont;
+	}
 
-    public LuiContainer CreateSteamAvatar(string parent, LuiPosition position, LuiOffset offset, string steamId, string color = null, string name = "")
-    {
-        LuiContainer cont = CreateEmptyContainer(parent, name);
-        cont.SetAnchorAndOffset(position, offset);
-        cont.SetSteamIcon(steamId, color);
-        elements.Add(cont);
-        return cont;
-    }
-
-    public LuiContainer CreateButton(LuiContainer container, LuiPosition position, LuiOffset offset, string command, string color, bool isProtected = true, string name = "") => CreateButton(container.name, position, offset, command, color, isProtected, name);
-	public LuiContainer CreateButton(LuiContainer container, LuiOffset offset, string command, string color, bool isProtected = true, string name = "") => CreateButton(container.name, LuiPosition.None, offset, command, color, isProtected, name);
+	public LuiContainer CreateButton(LuiContainer container, LuiPosition position, LuiOffset offset, string command, string color, bool isProtected = true, string name = "") => Reparent(CreateButton((string)null, position, offset, command, color, isProtected, name), container);
+	public LuiContainer CreateButton(LuiContainer container, LuiOffset offset, string command, string color, bool isProtected = true, string name = "") => Reparent(CreateButton((string)null, LuiPosition.None, offset, command, color, isProtected, name), container);
 	public LuiContainer CreateButton(string parent, LuiOffset offset, string command, string color, bool isProtected = true, string name = "") => CreateButton(parent, LuiPosition.None, offset, command, color, isProtected, name);
 
 	public LuiContainer CreateButton(string parent, LuiPosition position, LuiOffset offset, string command, string color, bool isProtected = true, string name = "")
@@ -328,8 +362,8 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-	public LuiContainer CreateInput(LuiContainer container, LuiPosition position, LuiOffset offset, string color, string text, int fontSize, string command, int charLimit = 0, bool isProtected = true, CUI.Handler.FontTypes font = CUI.Handler.FontTypes.RobotoCondensedBold, TextAnchor alignment = TextAnchor.UpperLeft, string name = "") => CreateInput(container.name, position, offset, color, text, fontSize, command, charLimit, isProtected, font, alignment, name);
-	public LuiContainer CreateInput(LuiContainer container, LuiOffset offset, string color, string text, int fontSize, string command, int charLimit = 0, bool isProtected = true, CUI.Handler.FontTypes font = CUI.Handler.FontTypes.RobotoCondensedBold, TextAnchor alignment = TextAnchor.UpperLeft, string name = "") => CreateInput(container.name, LuiPosition.None, offset, color, text, fontSize, command, charLimit, isProtected, font, alignment, name);
+	public LuiContainer CreateInput(LuiContainer container, LuiPosition position, LuiOffset offset, string color, string text, int fontSize, string command, int charLimit = 0, bool isProtected = true, CUI.Handler.FontTypes font = CUI.Handler.FontTypes.RobotoCondensedBold, TextAnchor alignment = TextAnchor.UpperLeft, string name = "") => Reparent(CreateInput((string)null, position, offset, color, text, fontSize, command, charLimit, isProtected, font, alignment, name), container);
+	public LuiContainer CreateInput(LuiContainer container, LuiOffset offset, string color, string text, int fontSize, string command, int charLimit = 0, bool isProtected = true, CUI.Handler.FontTypes font = CUI.Handler.FontTypes.RobotoCondensedBold, TextAnchor alignment = TextAnchor.UpperLeft, string name = "") => Reparent(CreateInput((string)null, LuiPosition.None, offset, color, text, fontSize, command, charLimit, isProtected, font, alignment, name), container);
 	public LuiContainer CreateInput(string parent, LuiOffset offset, string color, string text, int fontSize, string command, int charLimit = 0, bool isProtected = true, CUI.Handler.FontTypes font = CUI.Handler.FontTypes.RobotoCondensedBold, TextAnchor alignment = TextAnchor.UpperLeft, string name = "") => CreateInput(parent, LuiPosition.None, offset, color, text, fontSize, command, charLimit, isProtected, font, alignment, name);
 
 	public LuiContainer CreateInput(string parent, LuiPosition position, LuiOffset offset, string color, string text, int fontSize, string command, int charLimit = 0, bool isProtected = true, CUI.Handler.FontTypes font = CUI.Handler.FontTypes.RobotoCondensedBold, TextAnchor alignment = TextAnchor.MiddleCenter, string name = "")
@@ -341,8 +375,8 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-	public LuiContainer CreateCountdown(LuiContainer container, LuiPosition position, LuiOffset offset, int fontSize, string color, string text, TextAnchor alignment, float startTime, float endTime, float step = 1, float interval = 1, string command = null, bool isProtected = true, string name = "") => CreateCountdown(container.name, position, offset, fontSize, color, text, alignment, startTime, endTime, step, interval, command, isProtected, name);
-	public LuiContainer CreateCountdown(LuiContainer container, LuiOffset offset, int fontSize, string color, string text, TextAnchor alignment, float startTime, float endTime, float step = 1, float interval = 1, string command = null, bool isProtected = true, string name = "") => CreateCountdown(container.name, LuiPosition.None, offset, fontSize, color, text, alignment, startTime, endTime, step, interval, command, isProtected, name);
+	public LuiContainer CreateCountdown(LuiContainer container, LuiPosition position, LuiOffset offset, int fontSize, string color, string text, TextAnchor alignment, float startTime, float endTime, float step = 1, float interval = 1, string command = null, bool isProtected = true, string name = "") => Reparent(CreateCountdown((string)null, position, offset, fontSize, color, text, alignment, startTime, endTime, step, interval, command, isProtected, name), container);
+	public LuiContainer CreateCountdown(LuiContainer container, LuiOffset offset, int fontSize, string color, string text, TextAnchor alignment, float startTime, float endTime, float step = 1, float interval = 1, string command = null, bool isProtected = true, string name = "") => Reparent(CreateCountdown((string)null, LuiPosition.None, offset, fontSize, color, text, alignment, startTime, endTime, step, interval, command, isProtected, name), container);
 	public LuiContainer CreateCountdown(string parent, LuiOffset offset, int fontSize, string color, string text, TextAnchor alignment, float startTime, float endTime, float step = 1, float interval = 1, string command = null, bool isProtected = true, string name = "") => CreateCountdown(parent, LuiPosition.None, offset, fontSize, color, text, alignment, startTime, endTime, step, interval, command, isProtected, name);
 
 	public LuiContainer CreateCountdown(string parent, LuiPosition position, LuiOffset offset, int fontSize, string color, string text, TextAnchor alignment, float startTime, float endTime, float step = 1, float interval = 1, string command = null, bool isProtected = true, string name = "")
@@ -355,8 +389,8 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-	public LuiContainer CreateHorizontalLayoutGroup(LuiContainer container, LuiPosition position, LuiOffset offset, float spacing = 0, string name = "") => CreateHorizontalLayoutGroup(container.name, position, offset, spacing, name);
-	public LuiContainer CreateHorizontalLayoutGroup(LuiContainer container, LuiOffset offset, float spacing = 0, string name = "") => CreateHorizontalLayoutGroup(container.name, LuiPosition.None, offset, spacing, name);
+	public LuiContainer CreateHorizontalLayoutGroup(LuiContainer container, LuiPosition position, LuiOffset offset, float spacing = 0, string name = "") => Reparent(CreateHorizontalLayoutGroup((string)null, position, offset, spacing, name), container);
+	public LuiContainer CreateHorizontalLayoutGroup(LuiContainer container, LuiOffset offset, float spacing = 0, string name = "") => Reparent(CreateHorizontalLayoutGroup((string)null, LuiPosition.None, offset, spacing, name), container);
 	public LuiContainer CreateHorizontalLayoutGroup(string parent, LuiOffset offset, float spacing = 0, string name = "") => CreateHorizontalLayoutGroup(parent, LuiPosition.None, offset, spacing, name);
 
 	public LuiContainer CreateHorizontalLayoutGroup(string parent, LuiPosition position, LuiOffset offset, float spacing = 0, string name = "")
@@ -368,8 +402,8 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-	public LuiContainer CreateVerticalLayoutGroup(LuiContainer container, LuiPosition position, LuiOffset offset, float spacing = 0, string name = "") => CreateVerticalLayoutGroup(container.name, position, offset, spacing, name);
-	public LuiContainer CreateVerticalLayoutGroup(LuiContainer container, LuiOffset offset, float spacing = 0, string name = "") => CreateVerticalLayoutGroup(container.name, LuiPosition.None, offset, spacing, name);
+	public LuiContainer CreateVerticalLayoutGroup(LuiContainer container, LuiPosition position, LuiOffset offset, float spacing = 0, string name = "") => Reparent(CreateVerticalLayoutGroup((string)null, position, offset, spacing, name), container);
+	public LuiContainer CreateVerticalLayoutGroup(LuiContainer container, LuiOffset offset, float spacing = 0, string name = "") => Reparent(CreateVerticalLayoutGroup((string)null, LuiPosition.None, offset, spacing, name), container);
 	public LuiContainer CreateVerticalLayoutGroup(string parent, LuiOffset offset, float spacing = 0, string name = "") => CreateVerticalLayoutGroup(parent, LuiPosition.None, offset, spacing, name);
 
 	public LuiContainer CreateVerticalLayoutGroup(string parent, LuiPosition position, LuiOffset offset, float spacing = 0, string name = "")
@@ -381,8 +415,8 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-	public LuiContainer CreateGridLayoutGroup(LuiContainer container, LuiPosition position, LuiOffset offset, Vector2 cellSize, string name = "") => CreateGridLayoutGroup(container.name, position, offset, cellSize, name);
-	public LuiContainer CreateGridLayoutGroup(LuiContainer container, LuiOffset offset, Vector2 cellSize, string name = "") => CreateGridLayoutGroup(container.name, LuiPosition.None, offset, cellSize, name);
+	public LuiContainer CreateGridLayoutGroup(LuiContainer container, LuiPosition position, LuiOffset offset, Vector2 cellSize, string name = "") => Reparent(CreateGridLayoutGroup((string)null, position, offset, cellSize, name), container);
+	public LuiContainer CreateGridLayoutGroup(LuiContainer container, LuiOffset offset, Vector2 cellSize, string name = "") => Reparent(CreateGridLayoutGroup((string)null, LuiPosition.None, offset, cellSize, name), container);
 	public LuiContainer CreateGridLayoutGroup(string parent, LuiOffset offset, Vector2 cellSize, string name = "") => CreateGridLayoutGroup(parent, LuiPosition.None, offset, cellSize, name);
 
 	public LuiContainer CreateGridLayoutGroup(string parent, LuiPosition position, LuiOffset offset, Vector2 cellSize, string name = "")
@@ -394,8 +428,8 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-	public LuiContainer CreateContentFitter(LuiContainer container, LuiPosition position, LuiOffset offset, ContentSizeFitter.FitMode horizontal, ContentSizeFitter.FitMode vertical, string name = "") => CreateContentFitter(container.name, position, offset, horizontal, vertical, name);
-	public LuiContainer CreateContentFitter(LuiContainer container, LuiOffset offset, ContentSizeFitter.FitMode horizontal, ContentSizeFitter.FitMode vertical, string name = "") => CreateContentFitter(container.name, LuiPosition.None, offset, horizontal, vertical, name);
+	public LuiContainer CreateContentFitter(LuiContainer container, LuiPosition position, LuiOffset offset, ContentSizeFitter.FitMode horizontal, ContentSizeFitter.FitMode vertical, string name = "") => Reparent(CreateContentFitter((string)null, position, offset, horizontal, vertical, name), container);
+	public LuiContainer CreateContentFitter(LuiContainer container, LuiOffset offset, ContentSizeFitter.FitMode horizontal, ContentSizeFitter.FitMode vertical, string name = "") => Reparent(CreateContentFitter((string)null, LuiPosition.None, offset, horizontal, vertical, name), container);
 	public LuiContainer CreateContentFitter(string parent, LuiOffset offset, ContentSizeFitter.FitMode horizontal, ContentSizeFitter.FitMode vertical, string name = "") => CreateContentFitter(parent, LuiPosition.None, offset, horizontal, vertical, name);
 
 	public LuiContainer CreateContentFitter(string parent, LuiPosition position, LuiOffset offset, ContentSizeFitter.FitMode horizontal, ContentSizeFitter.FitMode vertical, string name = "")
@@ -407,8 +441,8 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-	public LuiContainer CreateLayoutElement(LuiContainer container, LuiPosition position, LuiOffset offset, float minWidth, float minHeight, string name = "") => CreateLayoutElement(container.name, position, offset, minWidth, minHeight, name);
-	public LuiContainer CreateLayoutElement(LuiContainer container, LuiOffset offset, float minWidth, float minHeight, string name = "") => CreateLayoutElement(container.name, LuiPosition.None, offset, minWidth, minHeight, name);
+	public LuiContainer CreateLayoutElement(LuiContainer container, LuiPosition position, LuiOffset offset, float minWidth, float minHeight, string name = "") => Reparent(CreateLayoutElement((string)null, position, offset, minWidth, minHeight, name), container);
+	public LuiContainer CreateLayoutElement(LuiContainer container, LuiOffset offset, float minWidth, float minHeight, string name = "") => Reparent(CreateLayoutElement((string)null, LuiPosition.None, offset, minWidth, minHeight, name), container);
 	public LuiContainer CreateLayoutElement(string parent, LuiOffset offset, float minWidth, float minHeight, string name = "") => CreateLayoutElement(parent, LuiPosition.None, offset, minWidth, minHeight, name);
 
 	public LuiContainer CreateLayoutElement(string parent, LuiPosition position, LuiOffset offset, float minWidth, float minHeight, string name = "")
@@ -420,8 +454,8 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-	public LuiContainer CreateDraggable(LuiContainer container, LuiPosition position, LuiOffset offset, string color, string filter = null, bool dropAnywhere = true, bool keepOnTop = false, bool limitToParent = false, float maxDistance = -1f, bool allowSwapping = false, string name = "") => CreateDraggable(container.name, position, offset, color, filter, dropAnywhere, keepOnTop, limitToParent, maxDistance, allowSwapping, name);
-	public LuiContainer CreateDraggable(LuiContainer container, LuiOffset offset, string color, string filter = null, bool dropAnywhere = true, bool keepOnTop = false, bool limitToParent = false, float maxDistance = -1f, bool allowSwapping = false, string name = "") => CreateDraggable(container.name, LuiPosition.None, offset, color, filter, dropAnywhere, keepOnTop, limitToParent, maxDistance, allowSwapping, name);
+	public LuiContainer CreateDraggable(LuiContainer container, LuiPosition position, LuiOffset offset, string color, string filter = null, bool dropAnywhere = true, bool keepOnTop = false, bool limitToParent = false, float maxDistance = -1f, bool allowSwapping = false, string name = "") => Reparent(CreateDraggable((string)null, position, offset, color, filter, dropAnywhere, keepOnTop, limitToParent, maxDistance, allowSwapping, name), container);
+	public LuiContainer CreateDraggable(LuiContainer container, LuiOffset offset, string color, string filter = null, bool dropAnywhere = true, bool keepOnTop = false, bool limitToParent = false, float maxDistance = -1f, bool allowSwapping = false, string name = "") => Reparent(CreateDraggable((string)null, LuiPosition.None, offset, color, filter, dropAnywhere, keepOnTop, limitToParent, maxDistance, allowSwapping, name), container);
 	public LuiContainer CreateDraggable(string parent, LuiOffset offset, string color, string filter = null, bool dropAnywhere = true, bool keepOnTop = false, bool limitToParent = false, float maxDistance = -1f, bool allowSwapping = false, string name = "") => CreateDraggable(parent, LuiPosition.None, offset, color, filter, dropAnywhere, keepOnTop, limitToParent, maxDistance, allowSwapping, name);
 
 	public LuiContainer CreateDraggable(string parent, LuiPosition position, LuiOffset offset, string color, string filter = null, bool dropAnywhere = true, bool keepOnTop = false, bool limitToParent = false, float maxDistance = -1f, bool allowSwapping = false, string name = "")
@@ -434,8 +468,8 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-	public LuiContainer CreateSlot(LuiContainer container, LuiPosition position, LuiOffset offset, string filter = null, string name = "") => CreateSlot(container.name, position, offset, filter, name);
-	public LuiContainer CreateSlot(LuiContainer container, LuiOffset offset, string filter = null, string name = "") => CreateSlot(container.name, LuiPosition.None, offset, filter, name);
+	public LuiContainer CreateSlot(LuiContainer container, LuiPosition position, LuiOffset offset, string filter = null, string name = "") => Reparent(CreateSlot((string)null, position, offset, filter, name), container);
+	public LuiContainer CreateSlot(LuiContainer container, LuiOffset offset, string filter = null, string name = "") => Reparent(CreateSlot((string)null, LuiPosition.None, offset, filter, name), container);
 	public LuiContainer CreateSlot(string parent, LuiOffset offset, string filter = null, string name = "") => CreateSlot(parent, LuiPosition.None, offset, filter, name);
 
 	public LuiContainer CreateSlot(string parent, LuiPosition position, LuiOffset offset, string filter = null, string name = "")
@@ -447,8 +481,8 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-	public LuiContainer CreateScrollView(LuiContainer container, LuiPosition position, LuiOffset offset, bool vertical, bool horizontal, ScrollRect.MovementType movementType = ScrollRect.MovementType.Clamped, float elasticity = 0, bool inertia = false, float decelerationRate = 0, float scrollSensitivity = 0, LuiScrollbar verticalScrollOptions = default, LuiScrollbar horizontalScrollOptions = default, string name = "") => CreateScrollView(container.name, position, offset, vertical, horizontal, movementType, elasticity, inertia, decelerationRate, scrollSensitivity, verticalScrollOptions, horizontalScrollOptions, name);
-	public LuiContainer CreateScrollView(LuiContainer container, LuiOffset offset, bool vertical, bool horizontal, ScrollRect.MovementType movementType = ScrollRect.MovementType.Clamped, float elasticity = 0, bool inertia = false, float decelerationRate = 0, float scrollSensitivity = 0, LuiScrollbar verticalScrollOptions = default, LuiScrollbar horizontalScrollOptions = default, string name = "") => CreateScrollView(container.name, LuiPosition.None, offset, vertical, horizontal, movementType, elasticity, inertia, decelerationRate, scrollSensitivity, verticalScrollOptions, horizontalScrollOptions, name);
+	public LuiContainer CreateScrollView(LuiContainer container, LuiPosition position, LuiOffset offset, bool vertical, bool horizontal, ScrollRect.MovementType movementType = ScrollRect.MovementType.Clamped, float elasticity = 0, bool inertia = false, float decelerationRate = 0, float scrollSensitivity = 0, LuiScrollbar verticalScrollOptions = default, LuiScrollbar horizontalScrollOptions = default, string name = "") => Reparent(CreateScrollView((string)null, position, offset, vertical, horizontal, movementType, elasticity, inertia, decelerationRate, scrollSensitivity, verticalScrollOptions, horizontalScrollOptions, name), container);
+	public LuiContainer CreateScrollView(LuiContainer container, LuiOffset offset, bool vertical, bool horizontal, ScrollRect.MovementType movementType = ScrollRect.MovementType.Clamped, float elasticity = 0, bool inertia = false, float decelerationRate = 0, float scrollSensitivity = 0, LuiScrollbar verticalScrollOptions = default, LuiScrollbar horizontalScrollOptions = default, string name = "") => Reparent(CreateScrollView((string)null, LuiPosition.None, offset, vertical, horizontal, movementType, elasticity, inertia, decelerationRate, scrollSensitivity, verticalScrollOptions, horizontalScrollOptions, name), container);
 	public LuiContainer CreateScrollView(string parent, LuiOffset offset, bool vertical, bool horizontal, ScrollRect.MovementType movementType = ScrollRect.MovementType.Clamped, float elasticity = 0, bool inertia = false, float decelerationRate = 0, float scrollSensitivity = 0, LuiScrollbar verticalScrollOptions = default, LuiScrollbar horizontalScrollOptions = default, string name = "") => CreateScrollView(parent, LuiPosition.None, offset, vertical, horizontal, movementType, elasticity, inertia, decelerationRate, scrollSensitivity, verticalScrollOptions, horizontalScrollOptions, name);
 
 	public LuiContainer CreateScrollView(string parent, LuiPosition position, LuiOffset offset, bool vertical, bool horizontal, ScrollRect.MovementType movementType = ScrollRect.MovementType.Clamped, float elasticity = 0, bool inertia = false, float decelerationRate = 0, float scrollSensitivity = 0, LuiScrollbar verticalScrollOptions = default, LuiScrollbar horizontalScrollOptions = default, string name = "")
@@ -460,56 +494,56 @@ public class LUI : IDisposable
 		return cont;
 	}
 
-    public LuiContainer CreateCanvasGroup(LuiContainer container, LuiPosition position, LuiOffset offset, float alpha = -1f, bool blocksRaycasts = true, bool interactable = true, string name = "") => CreateCanvasGroup(container.name, position, offset, alpha, blocksRaycasts, interactable, name);
-    public LuiContainer CreateCanvasGroup(LuiContainer container, LuiOffset offset, float alpha = -1f, bool blocksRaycasts = true, bool interactable = true, string name = "") => CreateCanvasGroup(container.name, LuiPosition.None, offset, alpha, blocksRaycasts, interactable, name);
-    public LuiContainer CreateCanvasGroup(string parent, LuiOffset offset, float alpha = -1f, bool blocksRaycasts = true, bool interactable = true, string name = "") => CreateCanvasGroup(parent, LuiPosition.None, offset, alpha, blocksRaycasts, interactable, name);
+	public LuiContainer CreateCanvasGroup(LuiContainer container, LuiPosition position, LuiOffset offset, float alpha = -1f, bool blocksRaycasts = true, bool interactable = true, string name = "") => Reparent(CreateCanvasGroup((string)null, position, offset, alpha, blocksRaycasts, interactable, name), container);
+	public LuiContainer CreateCanvasGroup(LuiContainer container, LuiOffset offset, float alpha = -1f, bool blocksRaycasts = true, bool interactable = true, string name = "") => Reparent(CreateCanvasGroup((string)null, LuiPosition.None, offset, alpha, blocksRaycasts, interactable, name), container);
+	public LuiContainer CreateCanvasGroup(string parent, LuiOffset offset, float alpha = -1f, bool blocksRaycasts = true, bool interactable = true, string name = "") => CreateCanvasGroup(parent, LuiPosition.None, offset, alpha, blocksRaycasts, interactable, name);
 
-    public LuiContainer CreateCanvasGroup(string parent, LuiPosition position, LuiOffset offset, float alpha = -1f, bool blocksRaycasts = true, bool interactable = true, string name = "")
-    {
-        LuiContainer cont = CreateEmptyContainer(parent, name);
-        cont.SetAnchorAndOffset(position, offset);
-        cont.SetCanvasGroup(alpha, blocksRaycasts, interactable);
-        elements.Add(cont);
-        return cont;
-    }
-
-    public LuiContainer CreateMask(LuiContainer container, LuiPosition position, LuiOffset offset, bool showMaskGraphic = true, string color = null, string name = "") => CreateMask(container.name, position, offset, showMaskGraphic, color, name);
-    public LuiContainer CreateMask(LuiContainer container, LuiOffset offset, bool showMaskGraphic = true, string color = null, string name = "") => CreateMask(container.name, LuiPosition.None, offset, showMaskGraphic, color, name);
-    public LuiContainer CreateMask(string parent, LuiOffset offset, bool showMaskGraphic = true, string color = null, string name = "") => CreateMask(parent, LuiPosition.None, offset, showMaskGraphic, color, name);
-
-    public LuiContainer CreateMask(string parent, LuiPosition position, LuiOffset offset, bool showMaskGraphic = true, string color = null, string name = "")
-    {
-        LuiContainer cont = CreateEmptyContainer(parent, name);
-        cont.SetAnchorAndOffset(position, offset);
-        if (color != null)
-            cont.SetColor(color);
-        cont.SetMask(showMaskGraphic);
-        elements.Add(cont);
-        return cont;
-    }
-
-    public LuiContainer CreateTooltip(LuiContainer container, LuiPosition position, LuiOffset offset, string text, CommunityEntity.TooltipType? tooltipType = null, string tooltipOffset = null, bool useCentre = false, Tooltip.DelayType? delay = null, TooltipContainer.PositionMode? positionMode = null, string name = "") => CreateTooltip(container.name, position, offset, text, tooltipType, tooltipOffset, useCentre, delay, positionMode, name);
-    public LuiContainer CreateTooltip(LuiContainer container, LuiOffset offset, string text, CommunityEntity.TooltipType? tooltipType = null, string tooltipOffset = null, bool useCentre = false, Tooltip.DelayType? delay = null, TooltipContainer.PositionMode? positionMode = null, string name = "") => CreateTooltip(container.name, LuiPosition.None, offset, text, tooltipType, tooltipOffset, useCentre, delay, positionMode, name);
-    public LuiContainer CreateTooltip(string parent, LuiOffset offset, string text, CommunityEntity.TooltipType? tooltipType = null, string tooltipOffset = null, bool useCentre = false, Tooltip.DelayType? delay = null, TooltipContainer.PositionMode? positionMode = null, string name = "") => CreateTooltip(parent, LuiPosition.None, offset, text, tooltipType, tooltipOffset, useCentre, delay, positionMode, name);
-
-    public LuiContainer CreateTooltip(string parent, LuiPosition position, LuiOffset offset, string text, CommunityEntity.TooltipType? tooltipType = null, string tooltipOffset = null, bool useCentre = false, Tooltip.DelayType? delay = null, TooltipContainer.PositionMode? positionMode = null, string name = "")
-    {
-        LuiContainer cont = CreateEmptyContainer(parent, name);
-        cont.SetAnchorAndOffset(position, offset);
-        cont.SetColor(LuiColors.Transparent);
-        cont.SetTooltip(text, tooltipType, tooltipOffset, useCentre, delay, positionMode);
-        elements.Add(cont);
-        return cont;
-    }
-
-    #endregion
-
-    /// <summary>
-    /// Gets the built UI in bytes. Useful when redrawing whole UI, and we want to minimalize delay between destroy and draw.
-    /// </summary>
-    public byte[] GetUiBytes()
+	public LuiContainer CreateCanvasGroup(string parent, LuiPosition position, LuiOffset offset, float alpha = -1f, bool blocksRaycasts = true, bool interactable = true, string name = "")
 	{
-		LUIBuilder cbi = new LUIBuilder(this);
+		LuiContainer cont = CreateEmptyContainer(parent, name);
+		cont.SetAnchorAndOffset(position, offset);
+		cont.SetCanvasGroup(alpha, blocksRaycasts, interactable);
+		elements.Add(cont);
+		return cont;
+	}
+
+	public LuiContainer CreateMask(LuiContainer container, LuiPosition position, LuiOffset offset, bool showMaskGraphic = true, string color = null, string name = "") => Reparent(CreateMask((string)null, position, offset, showMaskGraphic, color, name), container);
+	public LuiContainer CreateMask(LuiContainer container, LuiOffset offset, bool showMaskGraphic = true, string color = null, string name = "") => Reparent(CreateMask((string)null, LuiPosition.None, offset, showMaskGraphic, color, name), container);
+	public LuiContainer CreateMask(string parent, LuiOffset offset, bool showMaskGraphic = true, string color = null, string name = "") => CreateMask(parent, LuiPosition.None, offset, showMaskGraphic, color, name);
+
+	public LuiContainer CreateMask(string parent, LuiPosition position, LuiOffset offset, bool showMaskGraphic = true, string color = null, string name = "")
+	{
+		LuiContainer cont = CreateEmptyContainer(parent, name);
+		cont.SetAnchorAndOffset(position, offset);
+		if (color != null)
+			cont.SetColor(color);
+		cont.SetMask(showMaskGraphic);
+		elements.Add(cont);
+		return cont;
+	}
+
+	public LuiContainer CreateTooltip(LuiContainer container, LuiPosition position, LuiOffset offset, string text, CommunityEntity.TooltipType? tooltipType = null, string tooltipOffset = null, bool useCentre = false, Tooltip.DelayType? delay = null, TooltipContainer.PositionMode? positionMode = null, string name = "") => Reparent(CreateTooltip((string)null, position, offset, text, tooltipType, tooltipOffset, useCentre, delay, positionMode, name), container);
+	public LuiContainer CreateTooltip(LuiContainer container, LuiOffset offset, string text, CommunityEntity.TooltipType? tooltipType = null, string tooltipOffset = null, bool useCentre = false, Tooltip.DelayType? delay = null, TooltipContainer.PositionMode? positionMode = null, string name = "") => Reparent(CreateTooltip((string)null, LuiPosition.None, offset, text, tooltipType, tooltipOffset, useCentre, delay, positionMode, name), container);
+	public LuiContainer CreateTooltip(string parent, LuiOffset offset, string text, CommunityEntity.TooltipType? tooltipType = null, string tooltipOffset = null, bool useCentre = false, Tooltip.DelayType? delay = null, TooltipContainer.PositionMode? positionMode = null, string name = "") => CreateTooltip(parent, LuiPosition.None, offset, text, tooltipType, tooltipOffset, useCentre, delay, positionMode, name);
+
+	public LuiContainer CreateTooltip(string parent, LuiPosition position, LuiOffset offset, string text, CommunityEntity.TooltipType? tooltipType = null, string tooltipOffset = null, bool useCentre = false, Tooltip.DelayType? delay = null, TooltipContainer.PositionMode? positionMode = null, string name = "")
+	{
+		LuiContainer cont = CreateEmptyContainer(parent, name);
+		cont.SetAnchorAndOffset(position, offset);
+		cont.SetColor(LuiColors.Transparent);
+		cont.SetTooltip(text, tooltipType, tooltipOffset, useCentre, delay, positionMode);
+		elements.Add(cont);
+		return cont;
+	}
+
+	#endregion
+
+	/// <summary>
+	/// Gets the built UI in bytes. Useful when redrawing whole UI, and we want to minimalize delay between destroy and draw.
+	/// </summary>
+	public byte[] GetUiBytes()
+	{
+		using LuiBuilderInstance cbi = new LuiBuilderInstance(this);
 		return cbi.GetMergedBytes();
 	}
 
@@ -533,18 +567,28 @@ public class LUI : IDisposable
 	/// </summary>
 	public string ToJson()
 	{
-		LUIBuilder cbi = new LUIBuilder(this);
+		using LuiBuilderInstance cbi = new LuiBuilderInstance(this);
 		return cbi.GetJsonString();
 	}
 
 	private void Send(SendInfo send)
 	{
-		LUIBuilder cbi = new LUIBuilder(this);
+		using LuiBuilderInstance cbi = new LuiBuilderInstance(this);
 		NetWrite write = Net.sv.StartWrite();
 		write.PacketID(Message.Type.RPCMessage);
 		write.EntityID(CommunityEntity.ServerInstance.net.ID);
 		write.UInt32(StringPool.Get("AddUI"));
-		write.BytesWithSize(cbi.GetMergedBytes());
+		byte[] payload = ArrayPool<byte>.Shared.Rent(cbi.MaxUtf8ByteCount);
+		try
+		{
+			int length = cbi.WriteUtf8To(payload);
+			write.UInt32((uint)length);
+			write.Write(payload, 0, length);
+		}
+		finally
+		{
+			ArrayPool<byte>.Shared.Return(payload);
+		}
 		write.Send(send);
 	}
 
@@ -554,13 +598,19 @@ public class LUI : IDisposable
 		write.PacketID(Message.Type.RPCMessage);
 		write.EntityID(CommunityEntity.ServerInstance.net.ID);
 		write.UInt32(StringPool.Get("AddUI"));
-		write.BytesWithSize(bytes);
+		WriteBytesWithSize(write, bytes);
 		write.Send(send);
+	}
+
+	private static void WriteBytesWithSize(NetWrite write, byte[] bytes)
+	{
+		write.UInt32((uint)bytes.Length);
+		write.Write(bytes, 0, bytes.Length);
 	}
 
 	private void SendJson(SendInfo send)
 	{
-		LUIBuilder cbi = new LUIBuilder(this);
+		using LuiBuilderInstance cbi = new LuiBuilderInstance(this);
 		NetWrite write = Net.sv.StartWrite();
 		write.PacketID(Message.Type.RPCMessage);
 		write.EntityID(CommunityEntity.ServerInstance.net.ID);
@@ -574,13 +624,16 @@ public class LUI : IDisposable
 		for (var i = 0; i < elements.Count; i++)
 		{
 			LuiContainer element = elements[i];
-			foreach (LuiCompBase component in element.luiComponents)
-				LuiPool.ReturnComp(component);
+			LuiComponentDictionary components = element.luiComponents;
+			for (int c = 0; c < components.Count; c++)
+				LuiPool.ReturnComp(components[c]);
 			LuiPool.ReturnContainer(element);
 		}
 		elements.Clear();
 	}
-	
+
+	#region Quicker Strings
+
 	public static string GetFont(CUI.Handler.FontTypes type)
 	{
 		return type switch
@@ -598,151 +651,79 @@ public class LUI : IDisposable
 		};
 	}
 
-	public static string GetAlign(TextAnchor anchor)
-	{
-		return anchor switch
-		{
-			TextAnchor.UpperLeft => nameof(TextAnchor.UpperLeft),
-			TextAnchor.UpperCenter => nameof(TextAnchor.UpperCenter),
-			TextAnchor.UpperRight => nameof(TextAnchor.UpperRight),
-			TextAnchor.MiddleLeft => nameof(TextAnchor.MiddleLeft),
-			TextAnchor.MiddleCenter => nameof(TextAnchor.MiddleCenter),
-			TextAnchor.MiddleRight => nameof(TextAnchor.MiddleRight),
-			TextAnchor.LowerLeft => nameof(TextAnchor.LowerLeft),
-			TextAnchor.LowerCenter => nameof(TextAnchor.LowerCenter),
-			TextAnchor.LowerRight => nameof(TextAnchor.LowerRight),
-			_ => nameof(TextAnchor.UpperLeft)
-		};
-	}
-
-	public static string GetImageType(UnityEngine.UI.Image.Type imgType)
-	{
-		return imgType switch
-		{
-			Image.Type.Simple => nameof(Image.Type.Simple),
-			Image.Type.Sliced => nameof(Image.Type.Sliced),
-			Image.Type.Tiled => nameof(Image.Type.Tiled),
-			Image.Type.Filled => nameof(Image.Type.Filled),
-			_ => nameof(Image.Type.Simple)
-		};
-	}
-
-	public static string GetWrapMode(VerticalWrapMode mode)
-	{
-		return mode switch
-		{
-			VerticalWrapMode.Truncate => nameof(VerticalWrapMode.Truncate),
-			VerticalWrapMode.Overflow => nameof(VerticalWrapMode.Overflow),
-			_ => nameof(VerticalWrapMode.Truncate)
-		};
-	}
-
-	public static string GetLineType(InputField.LineType lineType)
-	{
-		return lineType switch
-		{
-			InputField.LineType.SingleLine => nameof(InputField.LineType.SingleLine),
-			InputField.LineType.MultiLineSubmit => nameof(InputField.LineType.MultiLineSubmit),
-			InputField.LineType.MultiLineNewline => nameof(InputField.LineType.MultiLineNewline),
-			_ => nameof(InputField.LineType.SingleLine)
-		};
-	}
-
-	public static string GetMovementType(ScrollRect.MovementType movementType)
-	{
-		return movementType switch
-		{
-			ScrollRect.MovementType.Unrestricted => nameof(ScrollRect.MovementType.Unrestricted),
-			ScrollRect.MovementType.Elastic => nameof(ScrollRect.MovementType.Elastic),
-			ScrollRect.MovementType.Clamped => nameof(ScrollRect.MovementType.Clamped),
-			_ => nameof(ScrollRect.MovementType.Unrestricted)
-		};
-	}
-
-	public static string GetTimerFormat(TimerFormat format)
-	{
-		return format switch
-		{
-			TimerFormat.None => nameof(TimerFormat.None),
-			TimerFormat.SecondsHundreth => nameof(TimerFormat.SecondsHundreth),
-			TimerFormat.MinutesSeconds => nameof(TimerFormat.MinutesSeconds),
-			TimerFormat.MinutesSecondsHundreth => nameof(TimerFormat.MinutesSecondsHundreth),
-			TimerFormat.HoursMinutes => nameof(TimerFormat.HoursMinutes),
-			TimerFormat.HoursMinutesSeconds => nameof(TimerFormat.HoursMinutesSeconds),
-			TimerFormat.HoursMinutesSecondsMilliseconds => nameof(TimerFormat.HoursMinutesSecondsMilliseconds),
-			TimerFormat.HoursMinutesSecondsTenths => nameof(TimerFormat.HoursMinutesSecondsTenths),
-			TimerFormat.DaysHoursMinutes => nameof(TimerFormat.DaysHoursMinutes),
-			TimerFormat.DaysHoursMinutesSeconds => nameof(TimerFormat.DaysHoursMinutesSeconds),
-			TimerFormat.Custom => nameof(TimerFormat.Custom),
-			_ => nameof(TimerFormat.None)
-		};
-	}
-
-	public static string GetCorner(GridLayoutGroup.Corner corner)
-	{
-		return corner switch
-		{
-			GridLayoutGroup.Corner.UpperLeft => nameof(GridLayoutGroup.Corner.UpperLeft),
-			GridLayoutGroup.Corner.UpperRight => nameof(GridLayoutGroup.Corner.UpperRight),
-			GridLayoutGroup.Corner.LowerLeft => nameof(GridLayoutGroup.Corner.LowerLeft),
-			GridLayoutGroup.Corner.LowerRight => nameof(GridLayoutGroup.Corner.LowerRight),
-			_ => nameof(GridLayoutGroup.Corner.UpperLeft)
-		};
-	}
-
-	public static string GetAxis(GridLayoutGroup.Axis axis)
-	{
-		return axis switch
-		{
-			GridLayoutGroup.Axis.Horizontal => nameof(GridLayoutGroup.Axis.Horizontal),
-			GridLayoutGroup.Axis.Vertical => nameof(GridLayoutGroup.Axis.Vertical),
-			_ => nameof(GridLayoutGroup.Axis.Vertical)
-		};
-	}
-
-	public static string GetConstraint(GridLayoutGroup.Constraint constraint)
-	{
-		return constraint switch
-		{
-			GridLayoutGroup.Constraint.Flexible => nameof(GridLayoutGroup.Constraint.Flexible),
-			GridLayoutGroup.Constraint.FixedColumnCount => nameof(GridLayoutGroup.Constraint.FixedColumnCount),
-			GridLayoutGroup.Constraint.FixedRowCount => nameof(GridLayoutGroup.Constraint.FixedRowCount),
-			_ => nameof(GridLayoutGroup.Constraint.FixedRowCount)
-		};
-	}
-
-	public static string GetFitMode(ContentSizeFitter.FitMode mode)
-	{
-		return mode switch
-		{
-			ContentSizeFitter.FitMode.Unconstrained => nameof(ContentSizeFitter.FitMode.Unconstrained),
-			ContentSizeFitter.FitMode.MinSize => nameof(ContentSizeFitter.FitMode.MinSize),
-			ContentSizeFitter.FitMode.PreferredSize => nameof(ContentSizeFitter.FitMode.PreferredSize),
-			_ => nameof(ContentSizeFitter.FitMode.Unconstrained)
-		};
-	}
-
-	public static string GetSendType(CommunityEntity.DraggablePositionSendType type)
-	{
-		return type switch
-		{
-			CommunityEntity.DraggablePositionSendType.NormalizedScreen => nameof(CommunityEntity.DraggablePositionSendType.NormalizedScreen),
-			CommunityEntity.DraggablePositionSendType.NormalizedParent => nameof(CommunityEntity.DraggablePositionSendType.NormalizedParent),
-			CommunityEntity.DraggablePositionSendType.Relative => nameof(CommunityEntity.DraggablePositionSendType.Relative),
-			CommunityEntity.DraggablePositionSendType.RelativeAnchor => nameof(CommunityEntity.DraggablePositionSendType.RelativeAnchor),
-			_ => nameof(CommunityEntity.DraggablePositionSendType.NormalizedScreen)
-		};
-	}
+	#endregion
 
 	public class LuiContainer
 	{
-		public string name;
-		public string parent;
+		internal string _name;
+		internal string nameIdentifier;
+		internal int nameId;
+
+		internal string _parent;
+		internal string parentIdentifier;
+		internal int parentId;
+
+		public string name
+		{
+			get
+			{
+				if (_name == null && nameId != 0)
+					_name = LUIBuilder.BuildElementId(nameIdentifier, nameId);
+				return _name;
+			}
+			set
+			{
+				_name = value;
+				nameId = 0;
+			}
+		}
+
+		public string parent
+		{
+			get
+			{
+				if (_parent == null && parentId != 0)
+					_parent = LUIBuilder.BuildElementId(parentIdentifier, parentId);
+				return _parent;
+			}
+			set
+			{
+				_parent = value;
+				parentId = 0;
+			}
+		}
+
+		internal bool HasName => nameId != 0 || !string.IsNullOrEmpty(_name);
+
+		internal bool HasParent => parentId != 0 || !string.IsNullOrEmpty(_parent);
+
+		internal void SetGeneratedName(string identifier, int id)
+		{
+			_name = null;
+			nameIdentifier = identifier;
+			nameId = id;
+		}
+
+		internal void SetParentOf(LuiContainer container)
+		{
+			if (container._name != null)
+			{
+				_parent = container._name;
+				parentId = 0;
+				return;
+			}
+
+			_parent = null;
+			parentIdentifier = container.nameIdentifier;
+			parentId = container.nameId;
+		}
+
 		public LuiComponentDictionary luiComponents;
 		public string destroyUi;
 		public float fadeOut;
 		public bool update;
 		public bool activeSelf = true;
+		public bool activeSelfSet;
 
 		#region Container Methods - Global
 
@@ -767,6 +748,7 @@ public class LUI : IDisposable
 		public LuiContainer SetActiveSelf(bool active)
 		{
 			activeSelf = active;
+			activeSelfSet = true;
 			return this;
 		}
 
@@ -777,7 +759,7 @@ public class LUI : IDisposable
 		public T UpdateComp<T>() where T : LuiCompBase
 		{
 			//if (!update)
-			//	Logger.Warn($"[LUI] You're trying to create update in element '{name}' (of parent '{parent}') which doesn't allow updates. Ignoring.");
+			//	Interface.Oxide.LogWarning($"[LUI] You're trying to create update in element '{name}' (of parent '{parent}') which doesn't allow updates. Ignoring.");
 			if (luiComponents.TryGetValue<T>(LuiPool.GetLuiCompType(typeof(T)), out var component))
 			{
 				return component;
@@ -791,7 +773,7 @@ public class LUI : IDisposable
 		{
 			//if (!update)
 			//{
-			//	Logger.Warn($"[LUI] You're trying to create update in element '{name}' (of parent '{parent}') which doesn't allow updates. Ignoring.");
+			//	Interface.Oxide.LogWarning($"[LUI] You're trying to create update in element '{name}' (of parent '{parent}') which doesn't allow updates. Ignoring.");
 			//	return;
 			//}
 			if (luiComponents.TryGetValue<T>(LuiPool.GetLuiCompType(typeof(T)), out var component))
@@ -813,6 +795,18 @@ public class LUI : IDisposable
 			else
 			{
 				Interface.Oxide.LogWarning($"[LUI] You're trying to switch fadeIn of component '{typeof(T)}' but it isn't present. Ignoring.");
+			}
+		}
+
+		public void SetBlocksRaycast<T>(bool blocksRaycast) where T : LuiCompBase
+		{
+			if (luiComponents.TryGetValue<T>(LuiPool.GetLuiCompType(typeof(T)), out var component))
+			{
+				component.blocksRaycast = blocksRaycast;
+			}
+			else
+			{
+				Interface.Oxide.LogWarning($"[LUI] You're trying to switch blocksRaycast of component '{typeof(T)}' but it isn't present. Ignoring.");
 			}
 		}
 
@@ -842,7 +836,7 @@ public class LUI : IDisposable
 				if (color != null)
 					text.color = color;
 				if (!update)
-					text.align = GetAlign(alignment);
+					text.align = alignment.ToString();
 			}
 			else
 			{
@@ -853,7 +847,7 @@ public class LUI : IDisposable
 				if (color != null)
 					text.color = color;
 				if (!update)
-					text.align = GetAlign(alignment);
+					text.align = alignment.ToString();
 				luiComponents.Add(text.type, text);
 			}
 			return this;
@@ -893,12 +887,12 @@ public class LUI : IDisposable
 		{
 			if (luiComponents.TryGetValue<LuiTextComp>(LuiCompType.Text, out var text))
 			{
-				text.align = GetAlign(align);
+				text.align = align.ToString();
 			}
 			else
 			{
 				text = LuiPool.GetText();
-				text.align = GetAlign(align);
+				text.align = align.ToString();
 				luiComponents.Add(text.type, text);
 			}
 			return this;
@@ -908,12 +902,12 @@ public class LUI : IDisposable
 		{
 			if (luiComponents.TryGetValue<LuiTextComp>(LuiCompType.Text, out var text))
 			{
-				text.verticalOverflow = GetWrapMode(verticalOverflow);
+				text.verticalOverflow = verticalOverflow.ToString();
 			}
 			else
 			{
 				text = LuiPool.GetText();
-				text.verticalOverflow = GetWrapMode(verticalOverflow);
+				text.verticalOverflow = verticalOverflow.ToString();
 				luiComponents.Add(text.type, text);
 			}
 			return this;
@@ -957,12 +951,12 @@ public class LUI : IDisposable
 		{
 			if (luiComponents.TryGetValue<LuiImageComp>(LuiCompType.Image, out var img))
 			{
-				img.imageType = GetImageType(imageType);
+				img.imageType = imageType.ToString();
 			}
 			else
 			{
 				img = LuiPool.GetImage();
-				img.imageType = GetImageType(imageType);
+				img.imageType = imageType.ToString();
 				luiComponents.Add(img.type, img);
 			}
 			return this;
@@ -975,7 +969,7 @@ public class LUI : IDisposable
 				if (sprite != null)
 				{
 					img.sprite = sprite;
-					img.imageType = GetImageType(imageType);
+					img.imageType = imageType.ToString();
 				}
 				if (color != null)
 					img.color = color;
@@ -986,7 +980,7 @@ public class LUI : IDisposable
 				if (sprite != null)
 				{
 					img.sprite = sprite;
-					img.imageType = GetImageType(imageType);
+					img.imageType = imageType.ToString();
 				}
 				if (color != null)
 					img.color = color;
@@ -1046,22 +1040,22 @@ public class LUI : IDisposable
 			return this;
 		}
 
-        public LuiContainer SetPpuMultiplier(float ppuMultiplier)
-        {
-            if (luiComponents.TryGetValue<LuiImageComp>(LuiCompType.Image, out var img))
-            {
-                img.ppuMultiplier = ppuMultiplier;
-            }
-            else
-            {
-                img = LuiPool.GetImage();
-                img.ppuMultiplier = ppuMultiplier;
-                luiComponents.Add(img.type, img);
-            }
-            return this;
-        }
+		public LuiContainer SetPpuMultiplier(float ppuMultiplier)
+		{
+			if (luiComponents.TryGetValue<LuiImageComp>(LuiCompType.Image, out var img))
+			{
+				img.ppuMultiplier = ppuMultiplier;
+			}
+			else
+			{
+				img = LuiPool.GetImage();
+				img.ppuMultiplier = ppuMultiplier;
+				luiComponents.Add(img.type, img);
+			}
+			return this;
+		}
 
-        public LuiContainer SetItemIcon(int itemid, ulong skinid)
+		public LuiContainer SetItemIcon(int itemid, ulong skinid)
 		{
 			if (luiComponents.TryGetValue<LuiImageComp>(LuiCompType.Image, out var img))
 			{
@@ -1129,14 +1123,14 @@ public class LUI : IDisposable
 			if (luiComponents.TryGetValue<LuiRawImageComp>(LuiCompType.RawImage, out var img))
 			{
 				img.steamid = steamid;
-				if (color != null)
+				if (!string.IsNullOrEmpty(color))
 					img.color = color;
 			}
 			else
 			{
 				img = LuiPool.GetRawImage();
 				img.steamid = steamid;
-				if (color != null)
+				if (!string.IsNullOrEmpty(color))
 					img.color = color;
 				luiComponents.Add(img.type, img);
 			}
@@ -1271,13 +1265,13 @@ public class LUI : IDisposable
 			if (luiComponents.TryGetValue<LuiButtonComp>(LuiCompType.Button, out var button))
 			{
 				button.sprite = sprite;
-				button.imageType = GetImageType(imageType);
+				button.imageType = imageType.ToString();
 			}
 			else
 			{
 				button = LuiPool.GetButton();
 				button.sprite = sprite;
-				button.imageType = GetImageType(imageType);
+				button.imageType = imageType.ToString();
 				luiComponents.Add(button.type, button);
 			}
 			return this;
@@ -1298,26 +1292,26 @@ public class LUI : IDisposable
 			return this;
 		}
 
-        public LuiContainer SetButtonInteractable(bool interactable)
-        {
-            if (luiComponents.TryGetValue<LuiButtonComp>(LuiCompType.Button, out var button))
-            {
-                button.interactable = interactable;
-            }
-            else
-            {
-                button = LuiPool.GetButton();
-                button.interactable = interactable;
-                luiComponents.Add(button.type, button);
-            }
-            return this;
-        }
+		public LuiContainer SetButtonInteractable(bool interactable)
+		{
+			if (luiComponents.TryGetValue<LuiButtonComp>(LuiCompType.Button, out var button))
+			{
+				button.interactable = interactable;
+			}
+			else
+			{
+				button = LuiPool.GetButton();
+				button.interactable = interactable;
+				luiComponents.Add(button.type, button);
+			}
+			return this;
+		}
 
-        #endregion
+		#endregion
 
-        #region Container Methods - LuiOutlineComp
+		#region Container Methods - LuiOutlineComp
 
-        public LuiContainer SetOutline(string color, Vector2 distance, bool useGraphicAlpha = false)
+		public LuiContainer SetOutline(string color, Vector2 distance, bool useGraphicAlpha = false)
 		{
 			if (luiComponents.TryGetValue<LuiOutlineComp>(LuiCompType.Outline, out var outline))
 			{
@@ -1356,7 +1350,7 @@ public class LUI : IDisposable
 					input.characterLimit = charLimit;
 				if (!update)
 				{
-					input.align = GetAlign(alignment);
+					input.align = alignment.ToString();
 					input.font = GetFont(font);
 				}
 			}
@@ -1375,7 +1369,7 @@ public class LUI : IDisposable
 					input.characterLimit = charLimit;
 				if (!update)
 				{
-					input.align = GetAlign(alignment);
+					input.align = alignment.ToString();
 					input.font = GetFont(font);
 				}
 				luiComponents.Add(input.type, input);
@@ -1449,12 +1443,12 @@ public class LUI : IDisposable
 		{
 			if (luiComponents.TryGetValue<LuiInputComp>(LuiCompType.InputField, out var input))
 			{
-				input.lineType = GetLineType(lineType);
+				input.lineType = lineType.ToString();
 			}
 			else
 			{
 				input = LuiPool.GetInput();
-				input.lineType = GetLineType(lineType);
+				input.lineType = lineType.ToString();
 				luiComponents.Add(input.type, input);
 			}
 			return this;
@@ -1475,26 +1469,26 @@ public class LUI : IDisposable
 			return this;
 		}
 
-        public LuiContainer SetInputInteractable(bool interactable)
-        {
-            if (luiComponents.TryGetValue<LuiInputComp>(LuiCompType.InputField, out var input))
-            {
-                input.interactable = interactable;
-            }
-            else
-            {
-                input = LuiPool.GetInput();
-                input.interactable = interactable;
-                luiComponents.Add(input.type, input);
-            }
-            return this;
-        }
+		public LuiContainer SetInputInteractable(bool interactable)
+		{
+			if (luiComponents.TryGetValue<LuiInputComp>(LuiCompType.InputField, out var input))
+			{
+				input.interactable = interactable;
+			}
+			else
+			{
+				input = LuiPool.GetInput();
+				input.interactable = interactable;
+				luiComponents.Add(input.type, input);
+			}
+			return this;
+		}
 
-        #endregion
+		#endregion
 
-        #region Container Methods - LuiCursorComp
+		#region Container Methods - LuiCursorComp
 
-        public LuiContainer AddCursor()
+		public LuiContainer AddCursor()
 		{
 			if (!luiComponents.TryGetValue<LuiCursorComp>(LuiCompType.Button, out var cursor))
 			{
@@ -1656,12 +1650,12 @@ public class LUI : IDisposable
 		{
 			if (luiComponents.TryGetValue<LuiCountdownComp>(LuiCompType.Countdown, out var countdown))
 			{
-				countdown.timerFormat = GetTimerFormat(format);
+				countdown.timerFormat = format.ToString();
 			}
 			else
 			{
 				countdown = LuiPool.GetCountdown();
-				countdown.timerFormat = GetTimerFormat(format);
+				countdown.timerFormat = format.ToString();
 				luiComponents.Add(countdown.type, countdown);
 			}
 			return this;
@@ -1690,12 +1684,12 @@ public class LUI : IDisposable
 		{
 			if (luiComponents.TryGetValue<LuiHorizontalLayoutGroupComp>(LuiCompType.HorizontalLayoutGroup, out var layoutGroup))
 			{
-				layoutGroup.childAlignment = GetAlign(anchor);
+				layoutGroup.childAlignment = anchor.ToString();
 			}
 			else
 			{
 				layoutGroup = LuiPool.GetHorizontalLayoutGroup();
-				layoutGroup.childAlignment = GetAlign(anchor);
+				layoutGroup.childAlignment = anchor.ToString();
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
 			return this;
@@ -1791,12 +1785,12 @@ public class LUI : IDisposable
 		{
 			if (luiComponents.TryGetValue<LuiVerticalLayoutGroupComp>(LuiCompType.VerticalLayoutGroup, out var layoutGroup))
 			{
-				layoutGroup.childAlignment = GetAlign(anchor);
+				layoutGroup.childAlignment = anchor.ToString();
 			}
 			else
 			{
 				layoutGroup = LuiPool.GetVerticalLayoutGroup();
-				layoutGroup.childAlignment = GetAlign(anchor);
+				layoutGroup.childAlignment = anchor.ToString();
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
 			return this;
@@ -1906,12 +1900,12 @@ public class LUI : IDisposable
 		{
 			if (luiComponents.TryGetValue<LuiGridLayoutGroupComp>(LuiCompType.GridLayoutGroup, out var layoutGroup))
 			{
-				layoutGroup.startCorner = GetCorner(corner);
+				layoutGroup.startCorner = corner.ToString();
 			}
 			else
 			{
 				layoutGroup = LuiPool.GetGridLayoutGroup();
-				layoutGroup.startCorner = GetCorner(corner);
+				layoutGroup.startCorner = corner.ToString();
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
 			return this;
@@ -1921,12 +1915,12 @@ public class LUI : IDisposable
 		{
 			if (luiComponents.TryGetValue<LuiGridLayoutGroupComp>(LuiCompType.GridLayoutGroup, out var layoutGroup))
 			{
-				layoutGroup.startAxis = GetAxis(axis);
+				layoutGroup.startAxis = axis.ToString();
 			}
 			else
 			{
 				layoutGroup = LuiPool.GetGridLayoutGroup();
-				layoutGroup.startAxis = GetAxis(axis);
+				layoutGroup.startAxis = axis.ToString();
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
 			return this;
@@ -1936,12 +1930,12 @@ public class LUI : IDisposable
 		{
 			if (luiComponents.TryGetValue<LuiGridLayoutGroupComp>(LuiCompType.GridLayoutGroup, out var layoutGroup))
 			{
-				layoutGroup.childAlignment = GetAlign(align);
+				layoutGroup.childAlignment = align.ToString();
 			}
 			else
 			{
 				layoutGroup = LuiPool.GetGridLayoutGroup();
-				layoutGroup.childAlignment = GetAlign(align);
+				layoutGroup.childAlignment = align.ToString();
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
 			return this;
@@ -1951,12 +1945,12 @@ public class LUI : IDisposable
 		{
 			if (luiComponents.TryGetValue<LuiGridLayoutGroupComp>(LuiCompType.GridLayoutGroup, out var layoutGroup))
 			{
-				layoutGroup.constraint = GetConstraint(constraint);
+				layoutGroup.constraint = constraint.ToString();
 			}
 			else
 			{
 				layoutGroup = LuiPool.GetGridLayoutGroup();
-				layoutGroup.constraint = GetConstraint(constraint);
+				layoutGroup.constraint = constraint.ToString();
 				luiComponents.Add(layoutGroup.type, layoutGroup);
 			}
 			return this;
@@ -2000,14 +1994,14 @@ public class LUI : IDisposable
 		{
 			if (luiComponents.TryGetValue<LuiContentSizeFitterComp>(LuiCompType.ContentSizeFitter, out var fitterComp))
 			{
-				fitterComp.horizontalFit = GetFitMode(horizontalFit);
-				fitterComp.verticalFit = GetFitMode(verticalFit);
+				fitterComp.horizontalFit = horizontalFit.ToString();
+				fitterComp.verticalFit = verticalFit.ToString();
 			}
 			else
 			{
 				fitterComp = LuiPool.GetContentSizeFitter();
-				fitterComp.horizontalFit = GetFitMode(horizontalFit);
-				fitterComp.verticalFit = GetFitMode(verticalFit);
+				fitterComp.horizontalFit = horizontalFit.ToString();
+				fitterComp.verticalFit = verticalFit.ToString();
 				luiComponents.Add(fitterComp.type, fitterComp);
 			}
 			return this;
@@ -2192,12 +2186,12 @@ public class LUI : IDisposable
 		{
 			if (luiComponents.TryGetValue<LuiDraggableComp>(LuiCompType.Draggable, out var drag))
 			{
-				drag.positionRPC = GetSendType(posSendType);
+				drag.positionRPC = posSendType.ToString();
 			}
 			else
 			{
 				drag = LuiPool.GetDraggable();
-				drag.positionRPC = GetSendType(posSendType);
+				drag.positionRPC = posSendType.ToString();
 				luiComponents.Add(drag.type, drag);
 			}
 			return this;
@@ -2250,7 +2244,7 @@ public class LUI : IDisposable
 				{
 					scroll.vertical = vertical;
 					scroll.horizontal = horizontal;
-					scroll.movementType = GetMovementType(movementType);
+					scroll.movementType = movementType.ToString();
 					scroll.inertia = inertia;
 				}
 				if (elasticity != 0)
@@ -2269,7 +2263,7 @@ public class LUI : IDisposable
 				{
 					scroll.vertical = vertical;
 					scroll.horizontal = horizontal;
-					scroll.movementType = GetMovementType(movementType);
+					scroll.movementType = movementType.ToString();
 					scroll.inertia = inertia;
 				}
 				if (elasticity != 0)
@@ -2338,82 +2332,82 @@ public class LUI : IDisposable
 			return this;
 		}
 
-        #endregion
+		#endregion
 
-        #region Container Methods - LuiCanvasGroupComp
+		#region Container Methods - LuiCanvasGroupComp
 
-        public LuiContainer SetCanvasGroup(float alpha = -1f, bool blocksRaycasts = true, bool interactable = true)
-        {
-            if (luiComponents.TryGetValue<LuiCanvasGroupComp>(LuiCompType.CanvasGroup, out var canvasGroup))
-            {
-                if (alpha != -1f)
-                    canvasGroup.alpha = alpha;
-                canvasGroup.blocksRaycasts = blocksRaycasts;
-                canvasGroup.interactable = interactable;
-            }
-            else
-            {
-                canvasGroup = LuiPool.GetCanvasGroup();
-                if (alpha != -1f)
-                    canvasGroup.alpha = alpha;
-                canvasGroup.blocksRaycasts = blocksRaycasts;
-                canvasGroup.interactable = interactable;
-                luiComponents.Add(canvasGroup.type, canvasGroup);
-            }
-            return this;
-        }
+		public LuiContainer SetCanvasGroup(float alpha = -1f, bool blocksRaycasts = true, bool interactable = true)
+		{
+			if (luiComponents.TryGetValue<LuiCanvasGroupComp>(LuiCompType.CanvasGroup, out var canvasGroup))
+			{
+				if (alpha != -1f)
+					canvasGroup.alpha = alpha;
+				canvasGroup.blocksRaycasts = blocksRaycasts;
+				canvasGroup.interactable = interactable;
+			}
+			else
+			{
+				canvasGroup = LuiPool.GetCanvasGroup();
+				if (alpha != -1f)
+					canvasGroup.alpha = alpha;
+				canvasGroup.blocksRaycasts = blocksRaycasts;
+				canvasGroup.interactable = interactable;
+				luiComponents.Add(canvasGroup.type, canvasGroup);
+			}
+			return this;
+		}
 
-        #endregion
+		#endregion
 
-        #region Container Methods - LuiMaskComp
+		#region Container Methods - LuiMaskComp
 
-        public LuiContainer SetMask(bool showMaskGraphic = true)
-        {
-            if (luiComponents.TryGetValue<LuiMaskComp>(LuiCompType.Mask, out var mask))
-            {
-                mask.showMaskGraphic = showMaskGraphic;
-            }
-            else
-            {
-                mask = LuiPool.GetMask();
-                mask.showMaskGraphic = showMaskGraphic;
-                luiComponents.Add(mask.type, mask);
-            }
-            return this;
-        }
+		public LuiContainer SetMask(bool showMaskGraphic = true)
+		{
+			if (luiComponents.TryGetValue<LuiMaskComp>(LuiCompType.Mask, out var mask))
+			{
+				mask.showMaskGraphic = showMaskGraphic;
+			}
+			else
+			{
+				mask = LuiPool.GetMask();
+				mask.showMaskGraphic = showMaskGraphic;
+				luiComponents.Add(mask.type, mask);
+			}
+			return this;
+		}
 
-        #endregion
+		#endregion
 
-        #region Container Methods - LuiTooltipComp
+		#region Container Methods - LuiTooltipComp
 
-        public LuiContainer SetTooltip(string text, CommunityEntity.TooltipType? tooltipType = null, string offset = null, bool useCentre = false, Tooltip.DelayType? delay = null, TooltipContainer.PositionMode? position = null)
-        {
-            if (luiComponents.TryGetValue<LuiTooltipComp>(LuiCompType.Tooltip, out var tooltip))
-            {
-                tooltip.text = text;
-                tooltip.tooltipType = tooltipType.ToString();
-                tooltip.offset = offset;
-                tooltip.useCentre = useCentre;
-                tooltip.delay = delay.ToString();
-                tooltip.position = position.ToString();
-            }
-            else
-            {
-                tooltip = LuiPool.GetTooltip();
-                tooltip.text = text;
-                tooltip.tooltipType = tooltipType.ToString();
-                tooltip.offset = offset;
-                tooltip.useCentre = useCentre;
-                tooltip.delay = delay.ToString();
-                tooltip.position = position.ToString();
-                luiComponents.Add(tooltip.type, tooltip);
-            }
-            return this;
-        }
+		public LuiContainer SetTooltip(string text, CommunityEntity.TooltipType? tooltipType = null, string offset = null, bool useCentre = false, Tooltip.DelayType? delay = null, TooltipContainer.PositionMode? position = null)
+		{
+			if (luiComponents.TryGetValue<LuiTooltipComp>(LuiCompType.Tooltip, out var tooltip))
+			{
+				tooltip.text = text;
+				tooltip.tooltipType = tooltipType.ToString();
+				tooltip.offset = offset;
+				tooltip.useCentre = useCentre;
+				tooltip.delay = delay.ToString();
+				tooltip.position = position.ToString();
+			}
+			else
+			{
+				tooltip = LuiPool.GetTooltip();
+				tooltip.text = text;
+				tooltip.tooltipType = tooltipType.ToString();
+				tooltip.offset = offset;
+				tooltip.useCentre = useCentre;
+				tooltip.delay = delay.ToString();
+				tooltip.position = position.ToString();
+				luiComponents.Add(tooltip.type, tooltip);
+			}
+			return this;
+		}
 
-        #endregion
+		#endregion
 
-    }
+	}
 }
 
 public static class LuiColors
@@ -2468,6 +2462,12 @@ public class LuiComponentDictionary : IEnumerable
 		}
 		value = null;
 		return false;
+	}
+
+	public LuiCompBase this[int index]
+	{
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		get => _values[index];
 	}
 
 	public IEnumerator GetEnumerator()
@@ -2599,20 +2599,20 @@ public enum LuiCompType
 	Slot,
 	NeedsKeyboard,
 	ScrollView,
-    CanvasGroup,
-    Mask,
-    Tooltip,
+	CanvasGroup,
+	Mask,
+	Tooltip,
 }
 
 public class LuiCompBase
 {
 	public LuiCompType type;
 	public bool enabled = true;
-
-    //All below present in like 80% of elements but to reduce method list, adding it here.
-    public float fadeIn;
-    public bool blocksRaycast = true;
-    public string placeholderParentId;
+	
+	//All below present in like 80% of elements but to reduce method list, adding it here.
+	public float fadeIn;
+	public bool blocksRaycast = true;
+	public string placeholderParentId;
 }
 
 public class LuiTextComp : LuiCompBase
@@ -2641,9 +2641,9 @@ public class LuiImageComp : LuiCompBase
 	public string slice;
 	public int itemid;
 	public ulong skinid;
-    public float ppuMultiplier = -1;
+	public float ppuMultiplier = -1;
 
-    public LuiImageComp()
+	public LuiImageComp()
 	{
 		type = LuiCompType.Image;
 	}
@@ -2679,9 +2679,9 @@ public class LuiButtonComp : LuiCompBase
 	public string disabledColor;
 	public float colorMultiplier = -1;
 	public float fadeDuration = -1;
-    public bool interactable = true;
+	public bool interactable = true;
 
-    public LuiButtonComp()
+	public LuiButtonComp()
 	{
 		type = LuiCompType.Button;
 	}
@@ -2715,9 +2715,9 @@ public class LuiInputComp : LuiCompBase
 	public bool needsKeyboard;
 	public bool hudMenuInput;
 	public bool autofocus;
-    public bool interactable = true;
+	public bool interactable = true;
 
-    public LuiInputComp()
+	public LuiInputComp()
 	{
 		type = LuiCompType.InputField;
 	}
@@ -2922,40 +2922,40 @@ public struct LuiScrollbar
 
 public class LuiCanvasGroupComp : LuiCompBase
 {
-    public float alpha = -1;
-    public bool blocksRaycasts = true;
-    public bool interactable = true;
-    public Vector2 fade = LUI.defaultFade;
+	public float alpha = -1;
+	public bool blocksRaycasts = true;
+	public bool interactable = true;
+	public Vector2 fade = LUI.defaultFade;
 
-    public LuiCanvasGroupComp()
-    {
-        type = LuiCompType.CanvasGroup;
-    }
+	public LuiCanvasGroupComp()
+	{
+		type = LuiCompType.CanvasGroup;
+	}
 }
 
 public class LuiMaskComp : LuiCompBase
 {
-    public bool showMaskGraphic = true;
+	public bool showMaskGraphic = true;
 
-    public LuiMaskComp()
-    {
-        type = LuiCompType.Mask;
-    }
+	public LuiMaskComp()
+	{
+		type = LuiCompType.Mask;
+	}
 }
 
 public class LuiTooltipComp : LuiCompBase
 {
-    public string tooltipType;
-    public string offset;
-    public bool useCentre;
-    public string text;
-    public string delay;
-    public string position;
+	public string tooltipType;
+	public string offset;
+	public bool useCentre;
+	public string text;
+	public string delay;
+	public string position;
 
-    public LuiTooltipComp()
-    {
-        type = LuiCompType.Tooltip;
-    }
+	public LuiTooltipComp()
+	{
+		type = LuiCompType.Tooltip;
+	}
 }
 
 //Uncomment when draggables will be out and there won't be anything like that in CUI.
@@ -3004,11 +3004,11 @@ public static class LuiPool
 	private static readonly Stack<LuiCompBase> _slots = new();
 	private static readonly Stack<LuiCompBase> _keyboards = new();
 	private static readonly Stack<LuiCompBase> _scrolls = new();
-    private static readonly Stack<LuiCompBase> _canvasGroups = new();
-    private static readonly Stack<LuiCompBase> _masks = new();
-    private static readonly Stack<LuiCompBase> _tooltips = new();
+	private static readonly Stack<LuiCompBase> _canvasGroups = new();
+	private static readonly Stack<LuiCompBase> _masks = new();
+	private static readonly Stack<LuiCompBase> _tooltips = new();
 
-    public static int poolElements => _containers.Count + _texts.Count + _images.Count + _rawImages.Count + _buttons.Count + _outlines.Count + _inputs.Count + _cursors.Count + _rects.Count + _countdowns.Count + _draggables.Count + _slots.Count + _keyboards.Count + _scrolls.Count;
+	public static int poolElements => _containers.Count + _texts.Count + _images.Count + _rawImages.Count + _buttons.Count + _outlines.Count + _inputs.Count + _cursors.Count + _rects.Count + _countdowns.Count + _draggables.Count + _slots.Count + _keyboards.Count + _scrolls.Count;
 
 	public static void ReturnComp<T>(T component) where T : LuiCompBase
 	{
@@ -3029,10 +3029,10 @@ public static class LuiPool
 			case LuiCompType.Slot: _slots.Push(component); break;
 			case LuiCompType.NeedsKeyboard: _keyboards.Push(component); break;
 			case LuiCompType.ScrollView: _scrolls.Push(component); break;
-            case LuiCompType.CanvasGroup: _canvasGroups.Push(component); break;
-            case LuiCompType.Mask: _masks.Push(component); break;
-            case LuiCompType.Tooltip: _tooltips.Push(component); break;
-        }
+			case LuiCompType.CanvasGroup: _canvasGroups.Push(component); break;
+			case LuiCompType.Mask: _masks.Push(component); break;
+			case LuiCompType.Tooltip: _tooltips.Push(component); break;
+		}
 	}
 
 	public static LuiTextComp GetText()
@@ -3049,8 +3049,8 @@ public static class LuiPool
 		comp.color = null;
 		comp.verticalOverflow = null;
 		comp.fadeIn = 0;
-        comp.blocksRaycast = true;
-        comp.placeholderParentId = null;
+		comp.blocksRaycast = true;
+		comp.placeholderParentId = null;
 		return comp;
 	}
 
@@ -3070,10 +3070,10 @@ public static class LuiPool
 		comp.png = null;
 		comp.itemid = 0;
 		comp.skinid = 0;
-        comp.ppuMultiplier = -1;
-        comp.fadeIn = 0;
-        comp.blocksRaycast = true;
-        comp.placeholderParentId = null;
+		comp.ppuMultiplier = -1;
+		comp.fadeIn = 0;
+		comp.blocksRaycast = true;
+		comp.placeholderParentId = null;
 		return comp;
 	}
 
@@ -3091,8 +3091,8 @@ public static class LuiPool
 		comp.png = null;
 		comp.steamid = null;
 		comp.fadeIn = 0;
-        comp.blocksRaycast = true;
-        comp.placeholderParentId = null;
+		comp.blocksRaycast = true;
+		comp.placeholderParentId = null;
 		return comp;
 	}
 
@@ -3116,10 +3116,10 @@ public static class LuiPool
 		comp.disabledColor = null;
 		comp.colorMultiplier = -1;
 		comp.fadeDuration = -1;
-        comp.interactable = true;
-        comp.fadeIn = 0;
-        comp.blocksRaycast = true;
-        comp.placeholderParentId = null;
+		comp.interactable = true;
+		comp.fadeIn = 0;
+		comp.blocksRaycast = true;
+		comp.placeholderParentId = null;
 		return comp;
 	}
 
@@ -3158,10 +3158,10 @@ public static class LuiPool
 		comp.needsKeyboard = false;
 		comp.hudMenuInput = false;
 		comp.autofocus = false;
-        comp.interactable = true;
-        comp.fadeIn = 0;
-        comp.blocksRaycast = true;
-        comp.placeholderParentId = null;
+		comp.interactable = true;
+		comp.fadeIn = 0;
+		comp.blocksRaycast = true;
+		comp.placeholderParentId = null;
 		return comp;
 	}
 
@@ -3356,47 +3356,47 @@ public static class LuiPool
 		return comp;
 	}
 
-    public static LuiCanvasGroupComp GetCanvasGroup()
-    {
-        if (_canvasGroups.Count == 0)
-            return new();
+	public static LuiCanvasGroupComp GetCanvasGroup()
+	{
+		if (_canvasGroups.Count == 0)
+			return new();
 
-        LuiCanvasGroupComp comp = _canvasGroups.Pop() as LuiCanvasGroupComp;
-        comp.enabled = true;
-        comp.alpha = -1;
-        comp.blocksRaycasts = true;
-        comp.interactable = true;
-        return comp;
-    }
+		LuiCanvasGroupComp comp = _canvasGroups.Pop() as LuiCanvasGroupComp;
+		comp.enabled = true;
+		comp.alpha = -1;
+		comp.blocksRaycasts = true;
+		comp.interactable = true;
+		return comp;
+	}
 
-    public static LuiMaskComp GetMask()
-    {
-        if (_masks.Count == 0)
-            return new();
+	public static LuiMaskComp GetMask()
+	{
+		if (_masks.Count == 0)
+			return new();
 
-        LuiMaskComp comp = _masks.Pop() as LuiMaskComp;
-        comp.enabled = true;
-        comp.showMaskGraphic = true;
-        return comp;
-    }
+		LuiMaskComp comp = _masks.Pop() as LuiMaskComp;
+		comp.enabled = true;
+		comp.showMaskGraphic = true;
+		return comp;
+	}
 
-    public static LuiTooltipComp GetTooltip()
-    {
-        if (_tooltips.Count == 0)
-            return new();
+	public static LuiTooltipComp GetTooltip()
+	{
+		if (_tooltips.Count == 0)
+			return new();
 
-        LuiTooltipComp comp = _tooltips.Pop() as LuiTooltipComp;
-        comp.enabled = true;
-        comp.tooltipType = null;
-        comp.offset = null;
-        comp.useCentre = false;
-        comp.text = null;
-        comp.delay = null;
-        comp.position = null;
-        return comp;
-    }
+		LuiTooltipComp comp = _tooltips.Pop() as LuiTooltipComp;
+		comp.enabled = true;
+		comp.tooltipType = null;
+		comp.offset = null;
+		comp.useCentre = false;
+		comp.text = null;
+		comp.delay = null;
+		comp.position = null;
+		return comp;
+	}
 
-    public static LuiCompType GetLuiCompType(Type type)
+	public static LuiCompType GetLuiCompType(Type type)
 	{
 		return type switch
 		{
@@ -3418,10 +3418,10 @@ public static class LuiPool
 			not null when type == typeof(LuiSlotComp) => LuiCompType.Slot,
 			not null when type == typeof(LuiKeyboardComp) => LuiCompType.NeedsKeyboard,
 			not null when type == typeof(LuiScrollComp) => LuiCompType.ScrollView,
-            not null when type == typeof(LuiCanvasGroupComp) => LuiCompType.CanvasGroup,
-            not null when type == typeof(LuiMaskComp) => LuiCompType.Mask,
-            not null when type == typeof(LuiTooltipComp) => LuiCompType.Tooltip,
-            _ => LuiCompType.Image
+			not null when type == typeof(LuiCanvasGroupComp) => LuiCompType.CanvasGroup,
+			not null when type == typeof(LuiMaskComp) => LuiCompType.Mask,
+			not null when type == typeof(LuiTooltipComp) => LuiCompType.Tooltip,
+			_ => LuiCompType.Image
 		};
 	}
 
@@ -3447,10 +3447,10 @@ public static class LuiPool
 			not null when type == typeof(LuiSlotComp) => LuiPool.GetSlot() as T,
 			not null when type == typeof(LuiKeyboardComp) => LuiPool.GetKeyboard() as T,
 			not null when type == typeof(LuiScrollComp) => LuiPool.GetScroll() as T,
-            not null when type == typeof(LuiCanvasGroupComp) => LuiPool.GetCanvasGroup() as T,
-            not null when type == typeof(LuiMaskComp) => LuiPool.GetMask() as T,
-            not null when type == typeof(LuiTooltipComp) => LuiPool.GetTooltip() as T,
-            _ => LuiPool.GetImage() as T,
+			not null when type == typeof(LuiCanvasGroupComp) => LuiPool.GetCanvasGroup() as T,
+			not null when type == typeof(LuiMaskComp) => LuiPool.GetMask() as T,
+			not null when type == typeof(LuiTooltipComp) => LuiPool.GetTooltip() as T,
+			_ => LuiPool.GetImage() as T,
 		};
 	}
 
@@ -3466,6 +3466,7 @@ public static class LuiPool
 			cont.fadeOut = 0;
 			cont.update = false;
 			cont.activeSelf = true;
+			cont.activeSelfSet = false;
 			return cont;
 		}
 		else
@@ -3477,6 +3478,8 @@ public static class LuiPool
 			cont.destroyUi = null;
 			cont.fadeOut = 0;
 			cont.update = false;
+			cont.activeSelf = true;
+			cont.activeSelfSet = false;
 			return cont;
 		}
 	}
