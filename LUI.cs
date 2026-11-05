@@ -260,16 +260,11 @@ public class LUI : IDisposable
 	public LuiContainer CreateImageFromDb(string parent, LuiPosition position, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "")
 	{
 		LuiContainer cont = CreateEmptyContainer(parent, name);
+		cont.SetAnchorAndOffset(position, offset);
 		if (imgDb.HasImage(dbName))
-		{
-			cont.SetAnchorAndOffset(position, offset);
 			cont.SetImage(imgDb.GetImageString(dbName), color);
-		}
 		else
-		{
-			Interface.Oxide.LogWarning($"[LUI] You're trying to load an image from ImageDatabase '{dbName}' which doesn't exist. Ignoring.");
-			return null;
-		}
+			Interface.Oxide.LogWarning($"[LUI] You're trying to load an image from ImageDatabase '{dbName}' which doesn't exist. Image won't be displayed!");
 		elements.Add(cont);
 		return cont;
 	}
@@ -281,16 +276,11 @@ public class LUI : IDisposable
 	public LuiContainer CreateRawImageFromDb(string parent, LuiPosition position, LuiOffset offset, string dbName, string color = LuiColors.White, string name = "")
 	{
 		LuiContainer cont = CreateEmptyContainer(parent, name);
+		cont.SetAnchorAndOffset(position, offset);
 		if (imgDb.HasImage(dbName))
-		{
-			cont.SetAnchorAndOffset(position, offset);
 			cont.SetRawImage(imgDb.GetImageString(dbName), color);
-		}
 		else
-		{
-			Interface.Oxide.LogWarning($"[LUI] You're trying to load an image from ImageDatabase '{dbName}' which doesn't exist. Ignoring.");
-			return null;
-		}
+			Interface.Oxide.LogWarning($"[LUI] You're trying to load an image from ImageDatabase '{dbName}' which doesn't exist. Image won't be displayed!");
 		elements.Add(cont);
 		return cont;
 	}
